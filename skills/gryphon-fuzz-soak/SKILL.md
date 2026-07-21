@@ -94,7 +94,7 @@ When the soak completes (or when you check in), read the trend and the ledger:
 
 ```bash
 scripts/dc exec -T web uv run python -c \
-  "from plugins.gryphon_playground.gridkin import fuzz_campaign as c; \
+  "from tap_plugin.gryphon_playground.gridkin import fuzz_campaign as c; \
    print(c.trend('plugins/gryphon_playground/gridkin/fuzz-campaign-log.jsonl'))"
 ```
 
