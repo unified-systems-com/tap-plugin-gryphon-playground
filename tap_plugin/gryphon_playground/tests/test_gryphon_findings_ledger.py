@@ -13,6 +13,7 @@ from pathlib import Path
 
 from tap_plugin.gryphon_playground.gridkin import findings_ledger as fl
 
+
 def _executor_path() -> Path:
     """Core's Gryphon executor, located through the installed package."""
     import tap_grid

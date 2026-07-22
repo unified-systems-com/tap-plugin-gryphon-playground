@@ -76,6 +76,11 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "Spec RIDs / ACIDs this scenario exercises. Required and non-empty — traceability is binding."
         },
+        "note": {
+          "type": "string",
+          "description": "Optional free-text provenance: WHY this scenario is shaped the way it is — the fixture vocabulary it depends on and why, a subtlety that is easy to 'simplify' away, or a past failure it guards against. This is the field that would have prevented the bare_match__field_absent regression: that scenario silently borrowed a field from the lotr demo plugin, and when lotr was retired no type carried the field, so the executor emitted no SQL and the scenario passed vacuously with nothing recording what it had been standing on. Use it for knowledge a reader cannot recover from the query text.",
+          "minLength": 1
+        },
         "inspired_by": {
           "type": "string",
           "pattern": "^opencypher TCK — (no applicable feature folder \\(.+\\)|.+/.+)$",

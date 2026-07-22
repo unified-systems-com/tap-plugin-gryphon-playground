@@ -39,7 +39,6 @@ import os
 import re
 
 import pytest
-
 from tap_plugin.gryphon_playground.gridkin import fuzz
 
 # Activated only when a summary path is named (set by scripts/gryphon-fuzz-campaign).

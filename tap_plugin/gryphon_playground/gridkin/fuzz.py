@@ -53,6 +53,7 @@ from typing import Any
 
 from tap_plugin.gryphon_playground.gridkin.model_oracle import Graph, OracleUnmodeled, evaluate
 from tap_plugin.gryphon_playground.gridkin.runner import _oracle_agrees
+
 from tap_grid.exceptions import SearchExecutionError
 from tap_grid.grift import grift_import
 from tap_grid.gryphon import explain_gryphon_raw

@@ -26,7 +26,6 @@ from __future__ import annotations
 import os
 
 import pytest
-
 from tap_plugin.gryphon_playground.gridkin import fuzz
 
 

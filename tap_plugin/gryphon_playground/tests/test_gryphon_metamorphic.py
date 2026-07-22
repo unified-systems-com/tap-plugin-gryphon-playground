@@ -16,9 +16,9 @@ regression to zero-eligible fails loudly).
 from __future__ import annotations
 
 import pytest
-
 from tap_plugin.gryphon_playground.gridkin import loader, metamorphic
 from tap_plugin.gryphon_playground.gridkin.runner import _seed_fixture
+
 from tap_grid.gryphon import explain_gryphon_raw
 
 _SCENARIOS = loader.discover_scenarios()

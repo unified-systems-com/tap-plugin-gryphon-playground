@@ -12,10 +12,10 @@ import re
 from pathlib import Path
 
 import pytest
-
 from tap_plugin.gryphon_playground.gridkin import coverage, loader, stage_coverage
 from tap_plugin.gryphon_playground.gridkin.loader import GridkinScenarioError, Scenario
 from tap_plugin.gryphon_playground.gridkin.runner import normalize_sql
+
 from tap.jsonfiles import load_json_file, load_schema
 
 _VALID_SCENARIO = {

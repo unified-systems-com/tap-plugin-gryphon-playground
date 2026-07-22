@@ -1,1 +1,6 @@
--- (no SQL captured)
+-- statement 1 · stage: bare-type-scan
+SELECT "grid_fixtures__exclusive_field"."entity_id" AS "entity_id"
+FROM "grid_fixtures__exclusive_field"
+INNER JOIN "tap_entity" ON ("grid_fixtures__exclusive_field"."entity_id" = "tap_entity"."id")
+WHERE ("tap_entity"."deleted_at" IS NULL AND "grid_fixtures__exclusive_field"."type_exclusive_field" = %s)
+-- params: ['anything']

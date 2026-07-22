@@ -13,7 +13,6 @@ with `GRIDKIN_UPDATE_SNAPSHOTS=1`. See spec-gridkin-v0.md.
 from __future__ import annotations
 
 import pytest
-
 from tap_plugin.gryphon_playground.gridkin import loader, runner
 
 _SCENARIOS = loader.discover_scenarios()

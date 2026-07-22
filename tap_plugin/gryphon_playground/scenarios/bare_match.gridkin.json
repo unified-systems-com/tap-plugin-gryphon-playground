@@ -63,8 +63,9 @@
         "req-grid-traversal-lang-bare-match-3"
       ],
       "inspired_by": "opencypher TCK — clauses/match (missing property is non-matching, not an error)",
+      "note": "Filters on grid_fixtures__exclusive_field.type_exclusive_field, the ONE data-lane field no other fixture type declares — so the scan must cover that single type and silently skip every other. Previously borrowed lotr__character.bio; when lotr was retired NO type had the field, the executor emitted no SQL at all, and this scenario passed vacuously. grid_fixtures now owns the capability instead of borrowing it from a deletable demo plugin.",
       "layer": "lite",
-      "query": "MATCH (n) WHERE n.data.bio = \"anything\"",
+      "query": "MATCH (n) WHERE n.data.type_exclusive_field = \"anything\"",
       "expected_envelope": "expected/bare_match__field_absent.expected.json",
       "expected_sql_snapshot": "expected/bare_match__field_absent.sql.txt"
     },
