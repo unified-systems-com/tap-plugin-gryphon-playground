@@ -1,0 +1,42 @@
+# CI for tap-plugin-gryphon-playground.
+#
+# A thin caller. All the logic lives in the reusable workflow in the core TAP repo
+# (`.github/workflows/plugin-ci.yml`, req-plugin-extdev-repo-ci) so every plugin repo —
+# ours and external developers' — runs the SAME admission gate, and improving it is one
+# edit in one place rather than a fan-out across a dozen repos.
+#
+# Since 2026-08-08 core is PUBLIC on the unified-systems-com org, which removed both of
+# the old silent-failure prerequisites: public reusable workflows are callable from any
+# repo (no Actions access_level sharing needed), and core can be checked out with no
+# credential at all. `harness_pat` is still plumbed through for now — retiring
+# TAP_CORE_RO_PAT is a separate, deliberate step — but a missing/expired value is no
+# longer fatal to checkout.
+#
+# `boot_profile` is intentionally omitted: the Django-free conformance job (structure +
+# requires_tap compatibility floor) is the gate here. A plugin that needs a real stack
+# ships a ci/nightly.boot.json and passes boot_profile to opt into the boot-and-test job
+# (see tap-plugin-samsite / tap-plugin-aws-core for the worked example).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Manual runs matter for a plugin repo: core can regress the plugin without a single
+  # commit landing HERE, and nothing else would re-run this gate before the nightly.
+  workflow_dispatch:
+
+# Explicit least-privilege GITHUB_TOKEN (CodeQL actions/missing-workflow-permissions).
+permissions:
+  contents: read
+
+jobs:
+  tap:
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@main
+    with:
+      plugin_slug: gryphon_playground
+      # Pinned deliberately. `main` means "whatever core is today", which turns an
+      # unrelated core change into a surprise red here. Bump this on purpose.
+      harness_ref: main
+    secrets:
+      harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
