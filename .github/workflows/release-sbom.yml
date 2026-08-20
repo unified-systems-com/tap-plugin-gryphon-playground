@@ -1,0 +1,29 @@
+# Release SBOM + attestations for tap-plugin-gryphon-playground.
+#
+# A thin caller (the plugin-ci.yml pattern): on every release tag push, the
+# reusable workflow in the core TAP repo builds the wheel at the tag, generates
+# the plugin's declared SBOM (CycloneDX + SPDX, fail-closed identity/conformance
+# gates), and attests wheel provenance + both SBOM predicates
+# (req-cicd-sbom-10). Verify a released wheel:
+#   gh attestation verify <wheel> --owner unified-systems-com
+#   gh attestation verify <wheel> --owner unified-systems-com \
+#     --predicate-type https://cyclonedx.org/bom
+# workflow_dispatch exists for pilot/backfill runs at an existing tag ref.
+name: release-sbom
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  release-sbom:
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: unified-systems-com/tap/.github/workflows/plugin-release-sbom.yml@main
+    with:
+      plugin_slug: gryphon_playground
