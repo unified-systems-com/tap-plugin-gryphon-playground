@@ -24,6 +24,11 @@ depends_on = [
 # mismatch. gryphon ships no `default` record: a bare pointer fails closed naming these
 # (req-boot-bootstrap-default-record-2).
 [[boot.records]]
+name = "ci"
+description = "RESERVED NAME (req-boot-bootstrap-ci-record): the stack this plugin's own tests run in — depends_on closure + self, offline, credential-free. The consumer flips self to editable."
+sha256 = "326eda52291c89ed0a6e5d3bb02685e497ac3f413325676b8d93ab54efc25b2a"
+
+[[boot.records]]
 name = "playground"
 description = "Muck around: grid_fixtures vocab + Gridkin corpus, no workers, empty grid."
 sha256 = "896771822cc416511c66f1743bc1716af15151221ab63a3ee525dd73291026c7"

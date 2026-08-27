@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "description": "gryphon_playground CI record (req-boot-bootstrap-ci-record) \u2014 the stack this plugin's own tests run in, and the one claim per-plugin CI is allowed to make: that gryphon_playground is correct against the dependencies it DECLARES and nothing else. Install set is exactly the depends_on closure (grid_fixtures, whose grid_fixtures__* node/edge vocabulary the Gridkin corpus references by string) plus gryphon_playground itself; the consumer \u2014 the plugin-ci boot-and-test lane, or `spawn --dev-plugins gryphon_playground` locally \u2014 flips the self entry to editable so the CHECKOUT under test is what runs, not the released tag. DELIBERATELY EXCLUDED: every other plugin (the corpus asserted table sets that only existed on a stack carrying compliance_core until 2026-08-27; the oracles now derive their roster from the live registry, and this record is what keeps them honest), all credentials, all required_secrets, and any population step that reaches the network \u2014 so a fork can run this lane and a nightly cannot flake on a third party. The Gridkin corpus builds its scenarios at query time, hence an empty population section. Reproduce CI exactly: spawn --from 'git+https://github.com/unified-systems-com/tap-plugin-gryphon-playground@v0.3.3#ci' --dev-plugins gryphon_playground",
+  "install": {
+    "plugins": [
+      {
+        "slug": "grid_fixtures",
+        "enabled": true,
+        "source": {
+          "type": "git",
+          "url": "https://github.com/unified-systems-com/tap-plugin-grid-fixtures",
+          "rev": "v0.3.1"
+        },
+        "note": "The one declared dependency (tap-plugin.toml depends_on). Install-only: the neutral grid_fixtures__* node/edge vocabulary the corpus queries by string, migrated so the scenarios have real types. Public repo, so no `credential` (req-tap-plugin-arch-source-secret-5)."
+      },
+      {
+        "slug": "gryphon_playground",
+        "enabled": true,
+        "source": {
+          "type": "git",
+          "url": "https://github.com/unified-systems-com/tap-plugin-gryphon-playground",
+          "rev": "v0.3.3"
+        },
+        "note": "Self, pinned like any app-of-apps record (req-boot-bootstrap-stage0-3) \u2014 the CONSUMER substitutes the checkout under test via tap.dev_workspace, so no CI directory layout is baked in here (req-boot-bootstrap-ci-record-4). Booting this record unflipped is a coherent stack: it runs the released tag."
+      }
+    ]
+  },
+  "population": {
+    "on_failure": "abort",
+    "steps": []
+  }
+}
