@@ -130,7 +130,7 @@
       "inspired_by": "opencypher TCK — clauses/return-skip-limit (negative LIMIT is rejected)",
       "layer": "lite",
       "query": "MATCH (n:grid_fixtures__node) RETURN n LIMIT -1",
-      "expected_error": { "type": "GryphonParseError" }
+      "expected_error": { "type": "SearchExecutionError", "message_contains": "parse error" }
     },
     {
       "name": "non-integer floating-point LIMIT is rejected",
@@ -139,7 +139,7 @@
       "inspired_by": "opencypher TCK — clauses/return-skip-limit (non-integer LIMIT is rejected)",
       "layer": "lite",
       "query": "MATCH (n:grid_fixtures__node) RETURN n LIMIT 2.5",
-      "expected_error": { "type": "GryphonParseError" }
+      "expected_error": { "type": "SearchExecutionError", "message_contains": "parse error" }
     },
     {
       "name": "non-constant expression LIMIT is rejected",
@@ -148,7 +148,7 @@
       "inspired_by": "opencypher TCK — clauses/return-skip-limit (non-constant LIMIT is rejected)",
       "layer": "lite",
       "query": "MATCH (n:grid_fixtures__node) RETURN n LIMIT n.data.severity_score",
-      "expected_error": { "type": "GryphonParseError" }
+      "expected_error": { "type": "SearchExecutionError", "message_contains": "parse error" }
     },
     {
       "name": "ORDER BY an undefined variable is rejected",
@@ -166,7 +166,7 @@
       "inspired_by": "opencypher TCK — clauses/return-orderby (aggregate misuse in ORDER BY is rejected)",
       "layer": "lite",
       "query": "MATCH (n:grid_fixtures__node) RETURN n.entity_id AS id ORDER BY COUNT(n)",
-      "expected_error": { "type": "GryphonParseError" }
+      "expected_error": { "type": "SearchExecutionError", "message_contains": "parse error" }
     }
   ]
 }
