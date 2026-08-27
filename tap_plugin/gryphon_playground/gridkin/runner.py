@@ -97,6 +97,181 @@ def redact_registry_scan(text: str) -> str:
     return _PARAMS_LINE_RE.sub(_trim_params, text, count=1)
 
 
+# ---------------------------------------------------------------------------
+# Per-type fan-out: snapshot the TEMPLATE, derive the ROSTER
+# ---------------------------------------------------------------------------
+#
+# A labelless `MATCH (n)` with a DATA-LANE filter does not compile to one query.
+# The executor scans each registered node type whose model declares the referenced
+# field and unions the ids (`_execute_bare_type_scan`: a type lacking the field
+# `continue`s and contributes nothing). So the statement COUNT and the table names
+# are an environment fact — the same class `redact_registry_scan` above already
+# handles for the spine-only branch's `entity_type IN (...)` enumeration, arriving
+# here in a different shape: N statements instead of one variable IN-list.
+#
+# Snapshotting them verbatim froze a stack into the oracle. The committed fixtures
+# named `compliance_core__*` tables, so the corpus only passed on a stack with
+# compliance_core installed — a plugin this one does not depend on, has no reason
+# to know about, and does not declare. That is a monorepo-era assumption: when
+# every plugin lived in one tree, "all installed types" was a constant. It is not
+# one now, and a per-plugin CI job that installs this plugin's declared deps
+# (grid_fixtures, and nothing else) must be able to run this corpus green.
+#
+# The fix is NOT to stop asserting. The scenario's whole point is that the scan
+# crosses types the corpus does not own (`req-grid-traversal-lang-bare-match-2`),
+# and the sibling `field_absent` scenario documents what happens when that
+# assertion quietly evaporates: when `lotr` was retired no type declared the
+# filtered field, the executor emitted no SQL at all, and the scenario passed
+# VACUOUSLY. A collapse alone would reintroduce exactly that failure mode.
+#
+# So the two halves are asserted separately, each where it is stable:
+#
+#   TEMPLATE (snapshot, exact) — the per-type statements are folded into ONE
+#     statement with the table name replaced by `<node-type-table>`. The fold
+#     REQUIRES them to be identical modulo that name, so a type compiling to a
+#     different plan still fails the text compare. JOIN shape, the deleted_at
+#     predicate, the filter, and the params are all still asserted byte-for-byte.
+#
+#   ROSTER (derived, exact) — `_check_scan_roster` recomputes, from the LIVE
+#     registry, the set of node types that declare the scenario's data-lane
+#     field(s), and asserts the scan covered exactly that set. Stack-independent
+#     by construction, and a stronger claim than the frozen list it replaces: it
+#     fails if the scan skips a type that declares the field OR touches one that
+#     does not, on whatever stack it runs.
+_TABLE_SENTINEL = "<node-type-table>"
+_FANOUT_SENTINEL = "<per-type-fanout>"
+_STATEMENT_HEADER_RE = re.compile(r"^-- statements? ([^\s]+) · stage: (.+)$")
+_TYPE_SCAN_FROM_RE = re.compile(r'^FROM "([a-z0-9_]+)"$', re.MULTILINE)
+
+
+def _statement_blocks(text: str) -> list[tuple[str, str, str]]:
+    """Split rendered SQL into ``(number, stage, body)`` blocks, in order."""
+    blocks: list[tuple[str, str, str]] = []
+    number = stage = ""
+    body: list[str] = []
+    for line in text.splitlines():
+        header = _STATEMENT_HEADER_RE.match(line.strip())
+        if header:
+            if stage:
+                blocks.append((number, stage, "\n".join(body).strip()))
+            number, stage = header.group(1), header.group(2)
+            body = []
+            continue
+        body.append(line)
+    if stage:
+        blocks.append((number, stage, "\n".join(body).strip()))
+    return blocks
+
+
+def _as_type_scan_template(body: str) -> tuple[str, str] | None:
+    """Return ``(table, templated_body)`` if *body* is a single-table per-type scan.
+
+    The entity bulk-fetch that closes a bare scan reads `tap_entity` and is NOT a
+    per-type statement, so it is left alone — matched here by requiring exactly one
+    distinct FROM table that is not the spine.
+    """
+    tables = set(_TYPE_SCAN_FROM_RE.findall(body))
+    if len(tables) != 1:
+        return None
+    table = tables.pop()
+    if table == "tap_entity":
+        return None
+    return table, body.replace(f'"{table}"', f'"{_TABLE_SENTINEL}"')
+
+
+def collapse_type_scan_fanout(text: str) -> tuple[str, tuple[str, ...]]:
+    """Fold a run of identical per-type scans into one templated statement.
+
+    Returns ``(collapsed_text, tables_scanned)``. Statements are renumbered with the
+    folded run counting as one, so the tail's numbering does not shift with the
+    roster either. A no-op (and an empty roster) for SQL with no per-type scan.
+    """
+    blocks = _statement_blocks(text)
+    if not blocks:
+        return text, ()
+
+    tables: list[str] = []
+    folded: list[tuple[str, str]] = []  # (stage, body) with the fan-out folded
+    pending_template: str | None = None
+    for _number, stage, body in blocks:
+        templated = _as_type_scan_template(body) if stage == "bare-type-scan" else None
+        if templated is None:
+            pending_template = None
+            folded.append((stage, body))
+            continue
+        table, template_body = templated
+        tables.append(table)
+        if pending_template == template_body:
+            continue  # same plan, different table — already represented
+        pending_template = template_body
+        folded.append((stage, template_body))
+
+    if not tables:
+        return text, ()
+
+    out: list[str] = []
+    for index, (stage, body) in enumerate(folded, start=1):
+        is_template = _TABLE_SENTINEL in body
+        # The COUNT stays out of the snapshot deliberately: it is the roster's size,
+        # which is exactly the environment fact being factored out. `_check_scan_roster`
+        # asserts it against the live registry instead.
+        label = _FANOUT_SENTINEL if is_template else str(index)
+        note = " · one per node type declaring the filtered field; roster asserted from the registry" if is_template else ""
+        out.append(f"-- statement {label} · stage: {stage}{note}")
+        out.append(body)
+    # No blank separators: `normalize_sql` (the first stage of the comparison
+    # pipeline) strips blank lines, so emitting them here would make the transform
+    # non-idempotent — an already-collapsed oracle would re-read one line shorter
+    # than a freshly-collapsed actual, and every fan-out scenario would fail on a
+    # cosmetic difference. The `-- statement` headers are the delimiter.
+    return "\n".join(out).strip() + "\n", tuple(sorted(tables))
+
+
+def _data_lane_fields(query: str) -> set[str]:
+    """The model field names a query's data-lane paths reference.
+
+    Read off the QUERY TEXT on purpose. This is the oracle side of the assertion, so
+    it must not borrow the executor's own path-classification — an oracle that asks
+    the implementation what it did cannot catch the implementation being wrong. The
+    corpus's queries are hand-authored and this shape (`<var>.data.<field>[...]`) is
+    the whole of the data lane's grammar; the first segment after `data` is the model
+    field, matching how a nested path is stored.
+    """
+    return set(re.findall(r"\b\w+\.data\.(\w+)", query))
+
+
+# A labelless node pattern: `(n)` with no `:label` and no edge hanging off it. Only
+# these route to the bare type scan; a LABELLED `MATCH (n:t) WHERE n.data.kind = ...`
+# also carries data-lane fields but compiles to one scan of its own table, so the
+# roster question does not apply to it.
+_LABELLESS_MATCH_RE = re.compile(r"MATCH\s*\(\s*\w*\s*\)(?!\s*[-<])")
+
+
+def _is_labelless_bare_match(query: str) -> bool:
+    """True when the query's pattern is a labelless `MATCH (n)` (the bare-scan route)."""
+    return _LABELLESS_MATCH_RE.search(query) is not None
+
+
+def _expected_scan_tables(query: str) -> set[str]:
+    """Tables a labelless data-lane scan MUST cover, derived from the live registry.
+
+    The requirement restated independently (`req-grid-traversal-lang-bare-match-2`):
+    every registered node type whose model declares ALL the referenced data-lane
+    fields is scanned; every type that does not is silently skipped.
+    """
+    from tap_grid.registry import get_model_class, list_entity_types
+
+    fields = _data_lane_fields(query)
+    if not fields or not _is_labelless_bare_match(query):
+        return set()
+    tables: set[str] = set()
+    for entity_type in list_entity_types():
+        model = get_model_class(entity_type)
+        if fields <= {f.name for f in model._meta.get_fields()}:
+            tables.add(model._meta.db_table)
+    return tables
+
+
 def run_scenario(scenario: Scenario, *, update_snapshots: bool = False) -> list[str]:
     """Run one Gridkin scenario.
 
@@ -128,6 +303,7 @@ def run_scenario(scenario: Scenario, *, update_snapshots: bool = False) -> list[
     failures: list[str] = []
     failures.extend(_check_envelope(scenario, actual_envelope))
     failures.extend(_check_sql(scenario, actual_sql))
+    failures.extend(_check_scan_roster(scenario, actual_sql))
     failures.extend(_check_oracle(scenario, actual_envelope))
     return failures
 
@@ -322,7 +498,7 @@ def _write_snapshots(scenario: Scenario, envelope: dict[str, Any], sql_text: str
         encoding="utf-8",
     )
     scenario.expected_sql_path.parent.mkdir(parents=True, exist_ok=True)
-    scenario.expected_sql_path.write_text(redact_registry_scan(sql_text), encoding="utf-8")
+    scenario.expected_sql_path.write_text(_normalize_for_compare(sql_text), encoding="utf-8")
 
 
 def _check_envelope(scenario: Scenario, actual: dict[str, Any]) -> list[str]:
@@ -336,15 +512,59 @@ def _check_envelope(scenario: Scenario, actual: dict[str, Any]) -> list[str]:
     return ["ENVELOPE MISMATCH — the response envelope changed (behavior).\n" + _json_diff(expected, actual_canonical)]
 
 
+def _normalize_for_compare(text: str) -> str:
+    """The full comparison pipeline: whitespace, registry enumeration, per-type fan-out."""
+    collapsed, _tables = collapse_type_scan_fanout(redact_registry_scan(normalize_sql(text)))
+    return collapsed if collapsed.endswith("\n") else collapsed + "\n"
+
+
 def _check_sql(scenario: Scenario, actual_sql: str) -> list[str]:
     path = scenario.expected_sql_path
     if not path.is_file():
         return [_missing(scenario, "SQL", path)]
-    expected = redact_registry_scan(normalize_sql(path.read_text(encoding="utf-8")))
-    actual = redact_registry_scan(normalize_sql(actual_sql))
+    expected = _normalize_for_compare(path.read_text(encoding="utf-8"))
+    actual = _normalize_for_compare(actual_sql)
     if expected == actual:
         return []
     return ["SQL MISMATCH — the executor's compiled SQL changed (query plan).\n" + _line_diff(expected, actual)]
+
+
+def _check_scan_roster(scenario: Scenario, actual_sql: str) -> list[str]:
+    """Assert a bare data-lane scan covered exactly the types declaring the field.
+
+    The half of the fan-out assertion that the collapsed snapshot deliberately does
+    not carry (see the fan-out note above). Silent when the query issued no per-type
+    scan, so it costs nothing for every other scenario.
+    """
+    _collapsed, scanned = collapse_type_scan_fanout(redact_registry_scan(normalize_sql(actual_sql)))
+    expected = _expected_scan_tables(scenario.query)
+    if not expected and not scanned:
+        return []  # not a data-lane bare scan — nothing for this check to say
+    if expected and not scanned:
+        # THE VACUUM. `bare_match`'s field-absent scenario records this happening for
+        # real: when `lotr` was retired, no type declared the filtered field, the
+        # executor emitted no SQL, and the scenario passed asserting nothing. Caught
+        # here directly rather than relying on a snapshot that a regeneration could
+        # quietly bake the emptiness into.
+        return [
+            "SCAN ROSTER VACUOUS — the labelless scan emitted no per-type statement, but "
+            f"{len(expected)} registered node type(s) declare {sorted(_data_lane_fields(scenario.query))}. "
+            "The scenario would assert nothing."
+        ]
+    if set(scanned) == expected:
+        return []
+    missed = sorted(expected - set(scanned))
+    extra = sorted(set(scanned) - expected)
+    detail = []
+    if missed:
+        detail.append(f"  NOT scanned but declares the field: {', '.join(missed)}")
+    if extra:
+        detail.append(f"  scanned but does NOT declare the field: {', '.join(extra)}")
+    return [
+        "SCAN ROSTER MISMATCH — the labelless scan did not cover exactly the node types "
+        f"declaring {sorted(_data_lane_fields(scenario.query))} "
+        f"({len(expected)} registered here).\n" + "\n".join(detail)
+    ]
 
 
 def _missing(scenario: Scenario, kind: str, path: Path) -> str:
