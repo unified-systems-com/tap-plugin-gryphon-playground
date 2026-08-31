@@ -446,12 +446,16 @@ def _node_matches(node_pat: Any, record: NodeRecord, inputs: dict[str, Any]) -> 
         return False
     for key, raw in node_pat.inline_props.items():
         want = _resolve_value(raw, inputs)
-        # Inline props filter spine `name` / `entity_type` or data-lane fields;
-        # the corpus uses them rarely. Resolve against spine then data.
-        if key in _SPINE_FIELDS:
-            have = getattr(record, key, None) if key != "dimensions" else record.dimensions
-        else:
-            have = record.data.get(key, None)
+        # DATA-LANE ONLY — `{k: v}` is exactly `WHERE var.data.k = v` (#196 and
+        # req-grid-traversal-lang-filters-1; the executor routes inline keys
+        # through the same data-lane resolver as the WHERE spelling). This
+        # previously resolved spine-first (name/entity_type, then data), a rule
+        # written speculatively when the executor consumed node maps NOWHERE, so
+        # there was no behavior to disagree with. There is now, and on a model
+        # that declares its own `name` the two rules pick different columns.
+        # The oracle judges the specified semantics, never a private variant —
+        # a spine-addressing map would be a divergence for the harness to catch.
+        have = record.data.get(key, None)
         if have != want:
             return False
     return True
