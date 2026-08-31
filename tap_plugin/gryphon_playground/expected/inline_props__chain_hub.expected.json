@@ -1,0 +1,220 @@
+{
+  "nodes": [
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
+      "entity_type": "grid_fixtures__hub",
+      "name": "Dense Hub",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
+        "name": "Dense Hub",
+        "description": "The densely connected hub.",
+        "kind": "hub",
+        "severity_score": 0,
+        "is_open": true,
+        "observed_at": null,
+        "tags": {
+          "zone": "core"
+        },
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "kind": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "name": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "tags": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "is_open": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "description": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "observed_at": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "severity_score": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    },
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-bafa7b3865a9",
+      "entity_type": "grid_fixtures__node",
+      "name": "Neighbor One",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-bafa7b3865a9",
+        "name": "Neighbor One",
+        "description": "First hub neighbor.",
+        "kind": "neighbor",
+        "severity_score": 10,
+        "is_open": true,
+        "observed_at": null,
+        "tags": {
+          "zone": "core"
+        },
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "kind": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "name": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "tags": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "is_open": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "description": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "observed_at": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "severity_score": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    },
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-bafb10535646",
+      "entity_type": "grid_fixtures__node",
+      "name": "Neighbor Two",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-bafb10535646",
+        "name": "Neighbor Two",
+        "description": "Second hub neighbor.",
+        "kind": "neighbor",
+        "severity_score": 20,
+        "is_open": false,
+        "observed_at": null,
+        "tags": {},
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "kind": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "name": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "tags": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "is_open": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "description": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "observed_at": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "severity_score": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    },
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-bafc00e2b0af",
+      "entity_type": "grid_fixtures__node",
+      "name": "Neighbor Three",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-bafc00e2b0af",
+        "name": "Neighbor Three",
+        "description": "Third hub neighbor.",
+        "kind": "neighbor",
+        "severity_score": 30,
+        "is_open": true,
+        "observed_at": null,
+        "tags": {},
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "kind": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "name": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "tags": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "is_open": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "description": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "observed_at": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+          "severity_score": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-bb00cf03bb0e",
+      "entity_type": "edge",
+      "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafa7b3865a9",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-bb00cf03bb0e",
+        "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafa7b3865a9",
+        "from_entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
+        "to_entity_id": "019e4b02-f37b-72df-a3e5-bafa7b3865a9",
+        "edge_type": "PG_LINKS__grid_fixtures",
+        "properties": {},
+        "description": null,
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "properties": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    },
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-bb0135c1d515",
+      "entity_type": "edge",
+      "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafb10535646",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-bb0135c1d515",
+        "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafb10535646",
+        "from_entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
+        "to_entity_id": "019e4b02-f37b-72df-a3e5-bafb10535646",
+        "edge_type": "PG_LINKS__grid_fixtures",
+        "properties": {},
+        "description": null,
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "properties": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    },
+    {
+      "entity_id": "019e4b02-f37b-72df-a3e5-bb02a19297a0",
+      "entity_type": "edge",
+      "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafc00e2b0af",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "created_at": "<volatile>",
+      "updated_at": "<volatile>",
+      "deleted_at": null,
+      "version": 1,
+      "originating_grid_id": "<volatile>",
+      "data": {
+        "entity_id": "019e4b02-f37b-72df-a3e5-bb02a19297a0",
+        "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafc00e2b0af",
+        "from_entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
+        "to_entity_id": "019e4b02-f37b-72df-a3e5-bafc00e2b0af",
+        "edge_type": "PG_LINKS__grid_fixtures",
+        "properties": {},
+        "description": null,
+        "batch_id": "019e4b02-f37b-72df-a3e5-baf80bb43b28",
+        "flip_map": {
+          "properties": "019e4b02-f37b-72df-a3e5-baf80bb43b28"
+        }
+      }
+    }
+  ]
+}

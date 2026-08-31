@@ -356,9 +356,44 @@ def _projection(rng: random.Random, var: str) -> str:
     return ", ".join(f"{var}.{suffix} AS {var}_{stem}" for suffix, stem in picks)
 
 
+def _gen_inline_map(rng: random.Random, vals: _Values) -> str:
+    """A node inline property map — 1-2 well-typed equality pairs, or nothing.
+
+    `{k: v}` is data-lane equality (`WHERE var.data.k = v`, #196), so pairs draw
+    from the same typed pools as the WHERE leaves: kind/str, severity_score/int
+    (with the same off-by-one nudge so non-matching maps get exercised),
+    is_open/bool — the boolean form is the shape 30+ of the BloodHound
+    org-setting queries use. Only declared fields and only matching literal
+    types: an undeclared key or a type mismatch is an executor REJECTION
+    (allowlist / type strictness), and rejection-vs-filter divergence is the
+    static suite's job (test_gryphon_construct_effect.py in core), not the
+    differential lane's. `null` values are deliberately never emitted — the 2VL
+    boundary belongs to the WHERE-leaf generators that model it explicitly.
+
+    The generator emitting this construct at all is the point: the oracle has
+    modeled node inline maps since v0 (`_node_matches`), but no generated query
+    ever carried one, so the judge was never asked — which is why the executor
+    dropping them survived three releases (#196).
+    """
+    if rng.random() >= 0.35:
+        return ""
+    pairs: list[str] = []
+    for fieldname in rng.sample(("kind", "severity_score", "is_open"), rng.randint(1, 2)):
+        if fieldname == "kind":
+            pairs.append(f"kind: {_q(rng.choice(vals.kinds))}")
+        elif fieldname == "severity_score":
+            lit = rng.choice(vals.severities)
+            if rng.random() < 0.4:  # nudge off a real value so empty results occur
+                lit += rng.choice((-1, 1))
+            pairs.append(f"severity_score: {lit}")
+        else:
+            pairs.append(f"is_open: {rng.choice(('true', 'false'))}")
+    return " {" + ", ".join(pairs) + "}"
+
+
 def _gen_typescan(rng: random.Random, vals: _Values) -> str:
     """`MATCH (v:LABEL) [WHERE p] [RETURN ...] [ORDER BY f [DESC] [LIMIT k]]`."""
-    query = f"MATCH (v:{rng.choice(_LABELS)})"
+    query = f"MATCH (v:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
     if rng.random() < 0.85:
         query += f" WHERE {_gen_predicate(rng, 'v', vals)}"
 
@@ -409,10 +444,13 @@ def _gen_chain(rng: random.Random, vals: _Values) -> str:
     lock it and the generator exercises the path here.
     """
     node_vars = ["a", "b"]
-    pattern = f"MATCH (a:{rng.choice(_LABELS)}){_edge_step(rng)}(b:{rng.choice(_LABELS)})"
+    pattern = (
+        f"MATCH (a:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+        f"{_edge_step(rng)}(b:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+    )
     two_hop = rng.random() < 0.3
     if two_hop:
-        pattern += f"{_edge_step(rng)}(c:{rng.choice(_LABELS)})"
+        pattern += f"{_edge_step(rng)}(c:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
         node_vars.append("c")
 
     # Nodes past the root edge (index ≥ 2) bind through a multi-valued reverse-FK
@@ -441,7 +479,10 @@ def _gen_union(rng: random.Random, vals: _Values) -> str:
     scoped per clause (a leaf on a variable a clause does not bind is not applied
     to it).
     """
-    query = f"MATCH (a:{rng.choice(_LABELS)}) MATCH (b:{rng.choice(_LABELS)})"
+    query = (
+        f"MATCH (a:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+        f" MATCH (b:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+    )
     if rng.random() < 0.6:
         query += f" WHERE {_gen_predicate(rng, rng.choice(('a', 'b')), vals)}"
     return query

@@ -1,0 +1,91 @@
+{
+  "feature": "Node inline property maps filter exactly as their WHERE spelling (#196)",
+  "background": {
+    "grift_fixture": "fixtures/sparse_dense.grift.json"
+  },
+  "scenarios": [
+    {
+      "name": "inline map filters a type scan like the WHERE spelling",
+      "tags": [
+        "inline-props",
+        "type-scan",
+        "current-behavior"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-filters-1"
+      ],
+      "inspired_by": "opencypher TCK — clauses/match (node property map); mirror of type_scan 'scan filters pg_node by a data-lane field'",
+      "layer": "full",
+      "query": "MATCH (n:grid_fixtures__node {kind: \"island\"})",
+      "expected_envelope": "expected/inline_props__kind_island.expected.json",
+      "expected_sql_snapshot": "expected/inline_props__kind_island.sql.txt"
+    },
+    {
+      "name": "boolean inline map filters — the BloodHound org-setting shape",
+      "tags": [
+        "inline-props",
+        "type-scan",
+        "boolean",
+        "current-behavior"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-filters-1"
+      ],
+      "inspired_by": "opencypher TCK — clauses/match (node property map, boolean value — the BloodHound org-setting shape, #196)",
+      "layer": "full",
+      "query": "MATCH (n:grid_fixtures__node {is_open: true})",
+      "expected_envelope": "expected/inline_props__is_open.expected.json",
+      "expected_sql_snapshot": "expected/inline_props__is_open.sql.txt"
+    },
+    {
+      "name": "non-matching inline map returns observed-empty, never everything",
+      "tags": [
+        "inline-props",
+        "type-scan",
+        "current-behavior"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-filters-1"
+      ],
+      "inspired_by": "opencypher TCK — clauses/match (property map matching nothing; #196's defect returned every node instead)",
+      "layer": "full",
+      "query": "MATCH (n:grid_fixtures__node {kind: \"zzz-no-such-kind\"})",
+      "expected_envelope": "expected/inline_props__no_match.expected.json",
+      "expected_sql_snapshot": "expected/inline_props__no_match.sql.txt"
+    },
+    {
+      "name": "inline maps on both chain ends narrow the traversal",
+      "tags": [
+        "inline-props",
+        "chain",
+        "current-behavior"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-filters-1"
+      ],
+      "inspired_by": "opencypher TCK — clauses/match (property maps on both nodes of a relationship pattern)",
+      "layer": "full",
+      "query": "MATCH (a:grid_fixtures__hub {kind: \"hub\"})-[e:PG_LINKS__grid_fixtures]->(b:grid_fixtures__node {kind: \"neighbor\"})",
+      "expected_envelope": "expected/inline_props__chain_hub.expected.json",
+      "expected_sql_snapshot": "expected/inline_props__chain_hub.sql.txt"
+    },
+    {
+      "name": "inline map ANDs with a WHERE predicate",
+      "tags": [
+        "inline-props",
+        "type-scan",
+        "where",
+        "current-behavior"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-filters-1",
+        "req-grid-traversal-lang-filters-2"
+      ],
+      "inspired_by": "opencypher TCK — clauses/match (property map combined with WHERE)",
+      "layer": "full",
+      "query": "MATCH (n:grid_fixtures__node {kind: \"neighbor\"}) WHERE n.data.is_open = true",
+      "expected_envelope": "expected/inline_props__map_and_where.expected.json",
+      "expected_sql_snapshot": "expected/inline_props__map_and_where.sql.txt"
+    }
+  ]
+}
