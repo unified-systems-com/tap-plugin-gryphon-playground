@@ -479,7 +479,10 @@ def _gen_union(rng: random.Random, vals: _Values) -> str:
     scoped per clause (a leaf on a variable a clause does not bind is not applied
     to it).
     """
-    query = f"MATCH (a:{rng.choice(_LABELS)}) MATCH (b:{rng.choice(_LABELS)})"
+    query = (
+        f"MATCH (a:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+        f" MATCH (b:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+    )
     if rng.random() < 0.6:
         query += f" WHERE {_gen_predicate(rng, rng.choice(('a', 'b')), vals)}"
     return query
