@@ -69,6 +69,7 @@ extending Gryphon or adding scenarios.
 ### Plugin Scope
 ----
 RID: `req-gryphon-playground-scope`
+
 Status: `Implemented`
 
 The `gryphon_playground` plugin exists to host Gryphon test scenarios, their
@@ -130,6 +131,7 @@ what the extraction bought.
 ### Playground Node and Edge Types
 ----
 RID: `req-gryphon-playground-vocabulary`
+
 Status: `Implemented`
 
 Gridkin fixtures use a small, abstract vocabulary of node and edge types that
@@ -213,6 +215,7 @@ fixed here.
 ### Two-Tier Fixture Structure
 ----
 RID: `req-gryphon-playground-fixtures`
+
 Status: `In Development`
 
 Fixtures come in two tiers, each serving a distinct role.
@@ -263,6 +266,7 @@ the playground for tutorial clarity doesn't ripple into test failures.
 ### Gridkin Format Specified Separately
 ----
 RID: `req-gryphon-playground-gridkin`
+
 Status: `Implemented`
 
 The Gridkin scenario file format is governed by a companion spec, not by this one.

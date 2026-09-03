@@ -57,6 +57,7 @@ is their shared operational companion.
 ### Gridkin Scenario Format
 ----
 RID: `req-gridkin-scenario-format`
+
 Status: `Implemented`
 
 A Gridkin scenario file is a JSON document that defines one feature's worth of
@@ -140,6 +141,7 @@ coordinated change under the snapshot discipline.
 ### Gridkin Runner Contract
 ----
 RID: `req-gridkin-runner-contract`
+
 Status: `Implemented`
 
 The runner is pytest-discoverable and follows a fixed lifecycle per scenario.
@@ -188,6 +190,7 @@ grid. `rows` are compared in order.
 ### Oracle Assertion Discipline
 ----
 RID: `req-gridkin-oracle-assertion`
+
 Status: `Implemented`
 
 The expected envelope and expected SQL files are oracles, not derivations.
@@ -235,6 +238,7 @@ committed contracts authored with intent, not as captured snapshots.
 ### Snapshot Regeneration Discipline
 ----
 RID: `req-gridkin-snapshot-discipline`
+
 Status: `Implemented`
 
 Regenerating expected files requires explicit opt-in and human review.
@@ -272,6 +276,7 @@ without review defeats the entire validation strategy.
 ### Explain SQL Snapshot
 ----
 RID: `req-gridkin-explain-snapshot`
+
 Status: `Implemented`
 
 Each scenario commits the exact ORM-compiled SQL the Gryphon executor produces for
@@ -357,6 +362,7 @@ returns, so a behavioral regression in the bare scan is still caught.
 ### Requirement Traceability
 ----
 RID: `req-gridkin-req-traceability`
+
 Status: `Implemented`
 
 Every Gridkin scenario cites the spec RIDs it exercises.
@@ -387,6 +393,7 @@ validation audit identified as missing from current Gryphon tests.
 ### TCK as Scenario Inspiration
 ----
 RID: `req-gridkin-tck-inspiration`
+
 Status: `Implemented`
 
 The openCypher Technology Compatibility Kit is mined for corner-case intent. No
@@ -450,6 +457,7 @@ internal-only.
 ### Rejection Scenarios
 ----
 RID: `req-gridkin-rejection-scenario`
+
 Status: `Implemented`
 
 The traversal contract includes which queries are *rejected*, not only which
@@ -487,6 +495,7 @@ split across Gridkin and a separate `test_gryphon.py` surface.
 ### TCK Coverage Ledger
 ----
 RID: `req-gridkin-tck-coverage`
+
 Status: `Implemented`
 
 `req-gridkin-tck-inspiration` makes each scenario cite *where* its intent came
@@ -543,6 +552,7 @@ structural, not a convention to remember.
 ### Executor-Stage Coverage Gate
 ----
 RID: `req-gridkin-stage-coverage`
+
 Status: `Implemented`
 
 `req-gridkin-tck-coverage` accounts for coverage of the language *intent*
@@ -607,6 +617,7 @@ and "does every run agree with an independent recomputation."
 ### Executor Branch-Coverage Ratchet
 ----
 RID: `req-gridkin-executor-branch-coverage`
+
 Status: `Implemented`
 
 The stage gate (`req-gridkin-stage-coverage`) proves every dispatch *path* runs
@@ -658,6 +669,7 @@ intent≠path-coverage AAR §7.
 ### Metamorphic TLP Corpus Assertion
 ----
 RID: `req-gridkin-metamorphic-tlp`
+
 Status: `Implemented`
 
 The model oracle (`req-gridkin-oracle-assertion`) checks each query against an
@@ -712,6 +724,7 @@ squarely at Gryphon's highest-risk surface, the null boundary.
 ### Differential Property Fuzzer
 ----
 RID: `req-gridkin-property-fuzz`
+
 Status: `Implemented`
 
 The model oracle (`req-gridkin-oracle-assertion`) is a second Gryphon engine that
@@ -818,6 +831,7 @@ never papered over.
 ### Fuzz Campaign Ledger
 ----
 RID: `req-gridkin-fuzz-campaign`
+
 Status: `Implemented`
 
 The property fuzzer's long-soak, trend-tracking complement. The per-commit gate (`req-gridkin-property-fuzz`) asserts a small committed band and fails on any divergence; a **campaign** grinds a large band the executor has never seen, classifies every query WITHOUT failing, and appends one summary row to an append-only ledger so the **bug frequency can be watched trending down as the executor hardens**. It is on-demand / loopable, never a per-commit gate (like the branch-coverage ratchet).
@@ -842,6 +856,7 @@ The property fuzzer's long-soak, trend-tracking complement. The per-commit gate 
 ### Findings Ledger (Bug Locality)
 ----
 RID: `req-gridkin-findings-ledger`
+
 Status: `Implemented`
 
 The fuzz-campaign ledger tracks bug **frequency over time** (trending down as the executor hardens); this tracks bug **locality** — WHERE in the executor defects concentrate — so the hot spots become the deliberate **refactor / simplification targets**. Every executor or oracle bug already earns a regression scenario; this rides that same discipline by appending one human-authored row at fix time recording which `subsystem` (a small structural vocabulary, each a set of executor functions) and which `functions` the defect lived in, its `class`, `discovery` source, and cross-cutting `tags`. The concentration is then read as a histogram: the hottest subsystem/function is where the next refactor pays off most.
@@ -865,6 +880,7 @@ The fuzz-campaign ledger tracks bug **frequency over time** (trending down as th
 ### JSON Schema for Scenario Files
 ----
 RID: `req-gridkin-json-schema`
+
 Status: `Implemented`
 
 The Gridkin scenario format is a new structured-data format and ships with a JSON
@@ -896,6 +912,7 @@ designed and shipped together.
 ### Multi-Fixture Background Loads
 ----
 RID: `req-gridkin-multi-fixture-load`
+
 Status: `Approved for Development`
 
 `background.grift_fixture` accepts either a single path (the existing form) or an ordered array of paths. When the array form is used, the runner imports each fixture in order during the seed phase. This unlocks scenarios that need pre-existing state for the flow under test — the canonical motivating case is optimistic concurrency (`req-grift-concurrency-version`), where the interesting OCC paths require an entity to exist before a subsequent fixture declares an `entity_expected_version` against it.
@@ -929,6 +946,7 @@ The single-string form remains valid and behaves identically to today. No existi
 ### v0 Non-Goals
 ----
 RID: `req-gridkin-nongoals`
+
 Status: `Implemented`
 
 Concerns explicitly excluded from Gridkin v0:
