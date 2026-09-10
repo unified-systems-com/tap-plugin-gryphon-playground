@@ -23,6 +23,8 @@ depends_on = [
 # tap/tests/test_boot_records.py guard fails closed on digest drift or a manifest<->files
 # mismatch. gryphon ships no `default` record: a bare pointer fails closed naming these
 # (req-boot-bootstrap-default-record-2).
+requires_tap = ">=0.1.5"  # the floor the push/PR lane proves (tap#365; George 2026-09-10)
+
 [[boot.records]]
 name = "ci"
 description = "RESERVED NAME (req-boot-bootstrap-ci-record): the stack this plugin's own tests run in — depends_on closure + self, offline, credential-free. The consumer flips self to editable."
