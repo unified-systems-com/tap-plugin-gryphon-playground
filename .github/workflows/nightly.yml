@@ -1,0 +1,67 @@
+# Nightly self-test (Stage 4 of unified-systems-com/tap#363, req-tap-plugin-extdev-repo-ci).
+#
+# Two questions, two rows. The plugin's push/PR lane (ci.yml) proves the plugin at its
+# declared core FLOOR — the reproducible check. This nightly asks the other question,
+# "will the next core break us?": the same reusable workflow against core `main` (the
+# alarm), and against the latest core release (informational). A red `main` row files or
+# updates ONE open issue for the owner; the next green closes it. A schedule is not
+# evidence — GitHub may delay or skip scheduled runs — so the run itself is the record.
+name: nightly
+on:
+  schedule:
+    - cron: "21 10 * * *"   # minute staggered per repo so the org's nightlies do not burst
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    name: vs core main
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@e68b1165e71f5eb106196f4ba138ea806f6d563b
+    with:
+      plugin_slug: gryphon_playground
+      harness_ref: main
+    secrets:
+      harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
+  latest:
+    name: vs latest core release (v0.1.6, informational)
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@e68b1165e71f5eb106196f4ba138ea806f6d563b
+    with:
+      plugin_slug: gryphon_playground
+      harness_ref: v0.1.6
+    secrets:
+      harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
+  owner-issue:
+    name: file or close the owner issue
+    needs: [main, latest]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MAIN_RESULT: ${{ needs.main.result }}
+      LATEST_RESULT: ${{ needs.latest.result }}
+      TITLE: "Nightly red vs core main"
+      ASSIGNEE: notgeorge   # no CODEOWNERS in this repo — the org's maintainer login
+    steps:
+      - name: Red main files or updates one issue; green main closes it
+        run: |
+          set -euo pipefail
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")"
+          if [ "$MAIN_RESULT" = "success" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --repo "$GITHUB_REPOSITORY" --comment "Green again vs core main: $run_url (latest release row: $LATEST_RESULT)."
+            fi
+            echo "vs core main: green (latest release row: $LATEST_RESULT)"
+            exit 0
+          fi
+          body="$(printf '%s\n\n%s' "The nightly run of this plugin against core \`main\` is **$MAIN_RESULT**: $run_url" "Latest core release row: $LATEST_RESULT. The push/PR lane proves the declared floor; this row proves the next core. Owner: fix the plugin (keep the floor), or raise the floor if the fix needs a newer core. This issue closes itself on the next green nightly.")"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Still red: $run_url (latest release row: $LATEST_RESULT)."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body" --assignee "$ASSIGNEE"
+          fi
+          echo "::error::vs core main is $MAIN_RESULT — see $run_url"
+          exit 1
