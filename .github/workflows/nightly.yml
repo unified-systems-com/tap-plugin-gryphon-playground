@@ -57,7 +57,7 @@ permissions:
 jobs:
   main:
     name: vs core main + fuzz campaign
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@f61d55226bf844ca475cc7f493c827aa54fee88b
     with:
       plugin_slug: gryphon_playground
       harness_ref: ${{ inputs.harness_ref || 'main' }}
@@ -82,7 +82,7 @@ jobs:
 
   latest:
     name: vs latest core release (v0.1.6, informational)
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@f61d55226bf844ca475cc7f493c827aa54fee88b
     with:
       plugin_slug: gryphon_playground
       harness_ref: v0.1.6
@@ -98,7 +98,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: unified-systems-com/tap/.github/workflows/nightly-owner-issue.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
+    uses: unified-systems-com/tap/.github/workflows/nightly-owner-issue.yml@f61d55226bf844ca475cc7f493c827aa54fee88b
     with:
       title: "Nightly red vs core main"
       result: ${{ needs.main.result }}
@@ -156,6 +156,10 @@ jobs:
           )"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The PR body ships with THIS workflow's ref; the ledger branch is cut from
+          # main, which may not carry it yet (first spin: "no such file"). Keep a copy
+          # outside the tree before switching branches.
+          cp .github/ledger-pr-body.md "$RUNNER_TEMP/ledger-pr-body.md"
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
             git fetch -q origin "$BRANCH"
             git checkout -q -B "$BRANCH" FETCH_HEAD
@@ -184,7 +188,7 @@ jobs:
           url="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json url --jq '.[0].url // empty')"
           if [ -z "$url" ]; then
             url="$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
-                     --title "nightly: fuzz campaign ledger" --body-file .github/ledger-pr-body.md)"
+                     --title "nightly: fuzz campaign ledger" --body-file "$RUNNER_TEMP/ledger-pr-body.md")"
           fi
           gh pr comment "$url" --repo "$GITHUB_REPOSITORY" \
             --body "$(date -u +%Y-%m-%d): ${SUMMARY:-no summary} — ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -226,7 +230,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: unified-systems-com/tap/.github/workflows/nightly-owner-issue.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
+    uses: unified-systems-com/tap/.github/workflows/nightly-owner-issue.yml@f61d55226bf844ca475cc7f493c827aa54fee88b
     with:
       title: "Nightly fuzz campaign found a defect"
       result: ${{ needs.campaign-verdict.outputs.result }}
