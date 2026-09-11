@@ -1,67 +1,235 @@
-# Nightly self-test (Stage 4 of unified-systems-com/tap#363, req-tap-plugin-extdev-repo-ci).
+# Nightly self-test + fuzz campaign (Stage 4 of unified-systems-com/tap#363,
+# req-tap-plugin-extdev-repo-ci; the campaign row closes unified-systems-com/tap#137).
 #
-# Two questions, two rows. The plugin's push/PR lane (ci.yml) proves the plugin at its
-# declared core FLOOR — the reproducible check. This nightly asks the other question,
-# "will the next core break us?": the same reusable workflow against core `main` (the
-# alarm), and against the latest core release (informational). A red `main` row files or
-# updates ONE open issue for the owner; the next green closes it. A schedule is not
-# evidence — GitHub may delay or skip scheduled runs — so the run itself is the record.
+# The push/PR lane (ci.yml) proves the plugin at its declared core FLOOR — the
+# reproducible check. This nightly asks the other questions:
+#
+#   main     "will the next core break us?" — the same reusable workflow against core
+#            `main` (the alarm) — and, only after that suite passes, the FUZZ CAMPAIGN:
+#            a fresh seed band the executor has never seen, 400 graphs x 25 queries =
+#            10,000 (the operator's opening volume, 2026-09-11: read the runtime off the
+#            first nights and adjust), every query classified against the model oracle
+#            with the TLP metamorphic relation riding the same suite, recorded as ONE
+#            ledger row. A campaign over a broken plugin measures nothing, which is why
+#            it runs after the tests rather than beside them.
+#   latest   the latest core release (informational).
+#
+# HOW WORD GETS OUT — core's reusable reporter (nightly-owner-issue.yml): one open issue
+# per signal, rewritten while red, closed on the next green; a run that produces no
+# verdict is filed as NOT OBSERVED, never rendered green. Two signals, two titles: the
+# suite vs core main, and a campaign defect — whose issue carries every defect's seed,
+# query and detail, and the steps to reproduce one graph, classify (check the oracle
+# first), fix, lock in with a scenario, and how it closes.
+#
+# THE LEDGER LANDS BY PR, never by a bot push to main: the row is appended on ONE
+# persistent branch (`nightly/fuzz-ledger`) whose open PR accumulates nights until a
+# human merges it — proposed, never pushed, the rule the org applies to pins. The seed
+# band is derived from the calendar (2_000_000 + days-since-2026-09-01 x 1000), so it
+# never depends on whether last night's row merged, never repeats, and never collides
+# with the gate's pinned seed (1729) or the July campaign band (1_000_000+).
+#
+# A schedule is not evidence — GitHub may delay or skip scheduled runs — so the run
+# itself is the record, and core's heartbeat (unified-systems-com/tap#440) asks each
+# morning whether it exists.
+#
+# `workflow_dispatch` inputs are for a maintainer's one-off spin (they require write
+# access to dispatch); `harness_ref` points the main row at a core branch or SHA.
 name: nightly
 on:
   schedule:
     - cron: "21 10 * * *"   # minute staggered per repo so the org's nightlies do not burst
   workflow_dispatch:
+    inputs:
+      harness_ref:
+        description: "Core ref for the `main` row — a one-off spin against a core branch or SHA. Default: main."
+        required: false
+        type: string
+        default: main
+      campaign_graphs:
+        description: "Graphs in tonight's band, x 25 queries each. Default 400 = 10,000 queries."
+        required: false
+        type: string
+        default: "400"
+
 permissions:
   contents: read
+
 jobs:
   main:
-    name: vs core main
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@e68b1165e71f5eb106196f4ba138ea806f6d563b
+    name: vs core main + fuzz campaign
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
     with:
       plugin_slug: gryphon_playground
-      harness_ref: main
+      harness_ref: ${{ inputs.harness_ref || 'main' }}
+      boot_and_test_timeout_minutes: 90
+      # Runs inside the booted web container after the in-package suite passes; it is
+      # sh (dash), not bash. The band start comes from the calendar, the provenance stamp
+      # names both commits (handed in by plugin-ci as TAP_CI_*_SHA), and the summary is
+      # kept for the verdict job. The graph count is a maintainer dispatch input.
+      after_tests_command: >-
+        mkdir -p /app/after-tests-out &&
+        export GRYPHON_FUZZ_CAMPAIGN_BASE=$((2000000 + ($(date -u +%s) - 1788220800) / 86400 * 1000)) &&
+        export GRYPHON_FUZZ_CAMPAIGN_SUMMARY_COPY=/app/after-tests-out/campaign-summary.json &&
+        export TAP_FUZZ_COMMIT="core@$(echo "$TAP_CI_HARNESS_SHA" | cut -c1-8)+plugin@$(echo "$TAP_CI_PLUGIN_SHA" | cut -c1-8)" &&
+        scripts/gryphon-fuzz-campaign ${{ inputs.campaign_graphs || '400' }} 25
+      # Confined by plugin-ci to this checkout and after-tests-out/ — never the harness
+      # tree at large, which holds the run's .env and secrets root.
+      after_tests_artifact_paths: |
+        _dev-plugins/gryphon_playground/tap_plugin/gryphon_playground/gridkin/fuzz-campaign-log.jsonl
+        after-tests-out/campaign-summary.json
     secrets:
       harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
+
   latest:
     name: vs latest core release (v0.1.6, informational)
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@e68b1165e71f5eb106196f4ba138ea806f6d563b
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
     with:
       plugin_slug: gryphon_playground
       harness_ref: v0.1.6
     secrets:
       harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
-  owner-issue:
-    name: file or close the owner issue
+
+  # Signal 1: the suite vs core main. The reporter's write scope is granted HERE, on the
+  # reporter job only; the test jobs above stay read-only.
+  report-main:
+    name: owner issue - vs core main
     needs: [main, latest]
     if: always()
-    runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
+    uses: unified-systems-com/tap/.github/workflows/nightly-owner-issue.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
+    with:
+      title: "Nightly red vs core main"
+      result: ${{ needs.main.result }}
+      assignee: notgeorge   # no CODEOWNERS in this repo — the org's maintainer login
+      labels: "nightly"
+      body: |
+        The nightly run of this plugin against core `main` did not pass. Latest core release row: `${{ needs.latest.result }}`.
+
+        **What this row proves.** The push/PR lane proves the declared floor; this row proves the NEXT core. A red here means core moved under the plugin — or the after-tests fuzz campaign itself crashed. Tell them apart in the run: job *vs core main + fuzz campaign*, step *Run the plugin's in-package tests* (the suite) versus *After-tests command* (`after-tests.log` in the run's `after-tests` artifact). A campaign that ran and FOUND defects does not red this job; it files its own issue, "Nightly fuzz campaign found a defect".
+
+        **Owner:** fix the plugin (keep the floor), or raise the floor if the fix needs a newer core. This issue closes itself on the next green nightly.
+
+  # The ledger row lands by PR on one persistent branch. Only after a green main row —
+  # a row from a run whose suite failed is a row about nothing.
+  ledger:
+    name: land the ledger row by PR
+    needs: [main]
+    if: needs.main.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
     env:
       GH_TOKEN: ${{ github.token }}
-      MAIN_RESULT: ${{ needs.main.result }}
-      LATEST_RESULT: ${{ needs.latest.result }}
-      TITLE: "Nightly red vs core main"
-      ASSIGNEE: notgeorge   # no CODEOWNERS in this repo — the org's maintainer login
+      LEDGER: tap_plugin/gryphon_playground/gridkin/fuzz-campaign-log.jsonl
+      BRANCH: nightly/fuzz-ledger
+    outputs:
+      pr_url: ${{ steps.pr.outputs.url }}
     steps:
-      - name: Red main files or updates one issue; green main closes it
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: after-tests
+          path: campaign
+      - name: Append tonight's row on the persistent ledger branch
         run: |
           set -euo pipefail
-          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")"
-          if [ "$MAIN_RESULT" = "success" ]; then
-            if [ -n "$existing" ]; then
-              gh issue close "$existing" --repo "$GITHUB_REPOSITORY" --comment "Green again vs core main: $run_url (latest release row: $LATEST_RESULT)."
-            fi
-            echo "vs core main: green (latest release row: $LATEST_RESULT)"
+          row="$(tail -n 1 "campaign/_dev-plugins/gryphon_playground/$LEDGER")"
+          [ -n "$row" ] || { echo "::error::no ledger row in the after-tests artifact"; exit 1; }
+          summary="$(python3 - <<'PY'
+          import json
+          s = json.load(open("campaign/after-tests-out/campaign-summary.json", encoding="utf-8"))
+          t = s["totals"]
+          print(
+              f"{s['n_queries']} queries over seeds {s['base_seed']}-{s['seed_end']}: "
+              f"agree {t.get('agree', 0)}, diverge {t.get('diverge', 0)}, rejected {t.get('rejected', 0)}, "
+              f"crashed {t.get('crashed', 0)}, unmodeled {t.get('unmodeled', 0)}; "
+              f"{s['distinct_defects']} distinct defect(s), oracle-asserted {s['asserted_fraction'] * 100:.1f}%"
+          )
+          PY
+          )"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch -q origin "$BRANCH"
+            git checkout -q -B "$BRANCH" FETCH_HEAD
+          else
+            git checkout -q -B "$BRANCH" origin/main
+          fi
+          if grep -qxF -- "$row" "$LEDGER"; then
+            echo "row already on the branch — nothing to append"
+          else
+            printf '%s\n' "$row" >> "$LEDGER"
+          fi
+          git add "$LEDGER"
+          if git diff --cached --quiet; then
+            echo "SUMMARY=(no new row) $summary" >> "$GITHUB_ENV"
             exit 0
           fi
-          body="$(printf '%s\n\n%s' "The nightly run of this plugin against core \`main\` is **$MAIN_RESULT**: $run_url" "Latest core release row: $LATEST_RESULT. The push/PR lane proves the declared floor; this row proves the next core. Owner: fix the plugin (keep the floor), or raise the floor if the fix needs a newer core. This issue closes itself on the next green nightly.")"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Still red: $run_url (latest release row: $LATEST_RESULT)."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body" --assignee "$ASSIGNEE"
+          git commit -q \
+            -m "chore(ledger): fuzz campaign $(date -u +%Y-%m-%d) — $summary" \
+            -m "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "SUMMARY=$summary" >> "$GITHUB_ENV"
+      - name: Open the ledger PR once; comment on it every night after
+        id: pr
+        run: |
+          set -euo pipefail
+          url="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json url --jq '.[0].url // empty')"
+          if [ -z "$url" ]; then
+            url="$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
+                     --title "nightly: fuzz campaign ledger" --body-file .github/ledger-pr-body.md)"
           fi
-          echo "::error::vs core main is $MAIN_RESULT — see $run_url"
-          exit 1
+          gh pr comment "$url" --repo "$GITHUB_REPOSITORY" \
+            --body "$(date -u +%Y-%m-%d): ${SUMMARY:-no summary} — ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+  # Signal 2: what the campaign found. A missing summary (the suite failed first, or the
+  # campaign did not finish) is NOT OBSERVED, never green.
+  campaign-verdict:
+    name: classify the campaign summary
+    needs: [main, ledger]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.verdict.outputs.result }}
+      body: ${{ steps.verdict.outputs.body }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        continue-on-error: true   # absent when the suite failed first; the script renders that as NOT OBSERVED
+        with:
+          name: after-tests
+          path: campaign
+      - name: Verdict + body for the reporter
+        id: verdict
+        env:
+          MAIN_RESULT: ${{ needs.main.result }}
+          LEDGER_PR: ${{ needs.ledger.outputs.pr_url }}
+        run: python3 .github/scripts/campaign_report.py campaign/after-tests-out/campaign-summary.json "$MAIN_RESULT" "$LEDGER_PR"
+
+  report-campaign:
+    name: owner issue - fuzz campaign
+    needs: [campaign-verdict]
+    if: always()
+    permissions:
+      contents: read
+      issues: write
+    uses: unified-systems-com/tap/.github/workflows/nightly-owner-issue.yml@b3e0e9f4843f7f850926d1b19a7c0e9abda1c2d2
+    with:
+      title: "Nightly fuzz campaign found a defect"
+      result: ${{ needs.campaign-verdict.outputs.result }}
+      assignee: notgeorge
+      labels: "nightly,gryphon"
+      body: ${{ needs.campaign-verdict.outputs.body }}
