@@ -146,8 +146,12 @@ jobs:
           else
             git checkout -q -B "$BRANCH" origin/main
           fi
-          if grep -qxF -- "$row" "$LEDGER"; then
-            echo "row already on the branch — nothing to append"
+          # De-duplicate by BAND, not by exact line: the band is calendar-derived, so a
+          # second dispatch on the same day re-runs the same seeds with a different
+          # commit stamp — a ledger measuring fresh bands must hold each band once.
+          base="$(python3 -c 'import json; print(json.load(open("campaign/after-tests-out/campaign-summary.json"))["base_seed"])')"
+          if grep -qF -- "\"base_seed\": $base," "$LEDGER"; then
+            echo "band starting at $base already on the ledger — nothing to append"
           else
             printf '%s\n' "$row" >> "$LEDGER"
           fi
