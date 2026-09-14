@@ -102,7 +102,7 @@ jobs:
     with:
       title: "Nightly red vs core main"
       result: ${{ needs.main.result }}
-      assignee: notgeorge   # no CODEOWNERS in this repo — the org's maintainer login
+      assignee: notgeorge   # the code owner (.github/CODEOWNERS)
       labels: "nightly"
       body: |
         The nightly run of this plugin against core `main` did not pass. Latest core release row: `${{ needs.latest.result }}`.
