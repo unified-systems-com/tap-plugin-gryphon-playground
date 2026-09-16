@@ -10,14 +10,12 @@ INNER JOIN "grid_fixtures__node" ON (T6."id" = "grid_fixtures__node"."entity_id"
 WHERE ("tap_entity"."deleted_at" IS NULL AND "tap_edge"."edge_type" = %s AND T3."entity_type" = %s AND T5."edge_type" = %s AND T6."entity_type" = %s AND T4."entity_type" = %s AND "grid_fixtures__node"."kind" = %s)
 ORDER BY "tap_entity"."created_at" DESC
 -- params: ['PG_LINKS__grid_fixtures', 'grid_fixtures__node', 'PG_LINKS__grid_fixtures', 'grid_fixtures__node', 'grid_fixtures__node', 'tail']
-
 -- statement 2 · stage: advanced
 SELECT "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", "tap_entity"."dimensions", "tap_entity"."originating_grid_id", "tap_entity"."version", "tap_entity"."deleted_at", "tap_entity"."created_at", "tap_entity"."updated_at"
 FROM "tap_entity"
 WHERE "tap_entity"."id" IN (%s, %s, %s)
 ORDER BY "tap_entity"."created_at" DESC
 -- params: [UUID('019f210b-3b22-738c-be7b-3ccadc367b2c'), UUID('019f210b-3b22-738c-be7b-3ccb1bfeb5fe'), UUID('019f210b-3b22-738c-be7b-3ccc741a6df0')]
-
 -- statement 3 · stage: advanced
 SELECT "tap_edge"."id", "tap_edge"."entity_id", "tap_edge"."batch_id", "tap_edge"."flip_map", "tap_edge"."from_entity_id", "tap_edge"."to_entity_id", "tap_edge"."edge_type", "tap_edge"."properties", "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", "tap_entity"."dimensions", "tap_entity"."originating_grid_id", "tap_entity"."version", "tap_entity"."deleted_at", "tap_entity"."created_at", "tap_entity"."updated_at"
 FROM "tap_edge"
@@ -25,14 +23,12 @@ INNER JOIN "tap_entity" ON ("tap_edge"."entity_id" = "tap_entity"."id")
 WHERE ("tap_entity"."deleted_at" IS NULL AND "tap_edge"."entity_id" IN (%s, %s))
 ORDER BY "tap_entity"."created_at" DESC
 -- params: [UUID('019f210b-3b22-738c-be7b-3ccf7d239d8e'), UUID('019f210b-3b22-738c-be7b-3cd04a9ff723')]
-
 -- statement 4 · stage: advanced
 SELECT "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", "tap_entity"."dimensions", "tap_entity"."originating_grid_id", "tap_entity"."version", "tap_entity"."deleted_at", "tap_entity"."created_at", "tap_entity"."updated_at"
 FROM "tap_entity"
 WHERE "tap_entity"."id" IN (%s, %s, %s)
 ORDER BY "tap_entity"."created_at" DESC
 -- params: [UUID('019f210b-3b22-738c-be7b-3ccadc367b2c'), UUID('019f210b-3b22-738c-be7b-3ccb1bfeb5fe'), UUID('019f210b-3b22-738c-be7b-3ccc741a6df0')]
-
 -- statement 5 · stage: advanced
 SELECT "tap_edge"."id", "tap_edge"."entity_id", "tap_edge"."batch_id", "tap_edge"."flip_map", "tap_edge"."from_entity_id", "tap_edge"."to_entity_id", "tap_edge"."edge_type", "tap_edge"."properties", "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", "tap_entity"."dimensions", "tap_entity"."originating_grid_id", "tap_entity"."version", "tap_entity"."deleted_at", "tap_entity"."created_at", "tap_entity"."updated_at"
 FROM "tap_edge"
