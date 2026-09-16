@@ -4,6 +4,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cada1264813",
       "entity_type": "grid_fixtures__node",
       "name": "Chain Root",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -17,6 +18,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cae986778a7",
       "entity_type": "grid_fixtures__node",
       "name": "Mid One",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -30,6 +32,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7caf4902f22b",
       "entity_type": "grid_fixtures__node",
       "name": "Mid Two",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -43,6 +46,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb0718770e5",
       "entity_type": "grid_fixtures__node",
       "name": "Tail A",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -56,6 +60,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb1f36889ce",
       "entity_type": "grid_fixtures__node",
       "name": "Tail B",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -69,6 +74,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb29d521ddb",
       "entity_type": "grid_fixtures__node",
       "name": "Tail C",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -82,6 +88,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb3746837b4",
       "entity_type": "grid_fixtures__node",
       "name": "Lone Start",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -95,6 +102,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb4a6b4a6e4",
       "entity_type": "grid_fixtures__node",
       "name": "Lone Mid",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -108,6 +116,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb5266e972d",
       "entity_type": "grid_fixtures__node",
       "name": "Lone End",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -123,6 +132,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb719f17669",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7cada1264813 --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7cae986778a7",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -136,6 +146,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb849f3d2aa",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7cada1264813 --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7caf4902f22b",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -149,6 +160,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cb97db1c797",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7cae986778a7 --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7cb0718770e5",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -162,6 +174,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cbab0939f33",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7cae986778a7 --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7cb1f36889ce",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -175,6 +188,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cbba0da7f72",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7caf4902f22b --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7cb29d521ddb",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -188,6 +202,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cbcae1fe8de",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7cb3746837b4 --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7cb4a6b4a6e4",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -201,6 +216,7 @@
       "entity_id": "019e4d9b-00a6-7210-918f-7cbd91cb44c1",
       "entity_type": "edge",
       "name": "019e4d9b-00a6-7210-918f-7cb4a6b4a6e4 --[PG_LINKS__grid_fixtures]--> 019e4d9b-00a6-7210-918f-7cb5266e972d",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },

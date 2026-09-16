@@ -4,6 +4,7 @@
       "entity_id": "019e6eab-d14d-7144-845c-2d48d4cc2edb",
       "entity_type": "grid_fixtures__node",
       "name": "Reading One",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -17,6 +18,7 @@
       "entity_id": "019e6eab-d14d-7144-845c-2d49aac6c4f4",
       "entity_type": "grid_fixtures__node",
       "name": "Reading Two",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -30,6 +32,7 @@
       "entity_id": "019e6eab-d14d-7144-845c-2d4af229bba6",
       "entity_type": "grid_fixtures__node",
       "name": "Reading Three",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -43,6 +46,7 @@
       "entity_id": "019e6eab-d14d-7144-845c-2d4be9843ce6",
       "entity_type": "grid_fixtures__node",
       "name": "Reading Three-Tied",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },

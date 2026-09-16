@@ -4,6 +4,7 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
       "entity_type": "grid_fixtures__hub",
       "name": "Dense Hub",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },

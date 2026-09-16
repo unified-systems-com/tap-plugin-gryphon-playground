@@ -4,6 +4,7 @@
       "entity_id": "019e4dbd-db9c-7713-b0fd-22b965d69b53",
       "entity_type": "grid_fixtures__node",
       "name": "Property Hub",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -17,6 +18,7 @@
       "entity_id": "019e4dbd-db9c-7713-b0fd-22ba8f88eb06",
       "entity_type": "grid_fixtures__node",
       "name": "Gold Target",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -32,6 +34,7 @@
       "entity_id": "019e4dbd-db9c-7713-b0fd-22bc7f074335",
       "entity_type": "edge",
       "name": "019e4dbd-db9c-7713-b0fd-22b965d69b53 --[PG_LINKS__grid_fixtures]--> 019e4dbd-db9c-7713-b0fd-22ba8f88eb06",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
