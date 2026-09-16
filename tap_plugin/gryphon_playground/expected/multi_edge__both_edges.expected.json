@@ -4,6 +4,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fc8952b3f91",
       "entity_type": "grid_fixtures__node",
       "name": "Multi Source",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -17,6 +18,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fc97af589b8",
       "entity_type": "grid_fixtures__node",
       "name": "Multi Target",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -32,6 +34,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fca39a3fcda",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fc8952b3f91 --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc97af589b8",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -45,6 +48,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fcb6e6c20bc",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fc8952b3f91 --[PG_NESTS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc97af589b8",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },

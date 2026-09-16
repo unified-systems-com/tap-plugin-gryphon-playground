@@ -4,6 +4,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fc238769248",
       "entity_type": "grid_fixtures__node",
       "name": "Self Loop",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -19,6 +20,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fc61559e1c7",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fc238769248 --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc238769248",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },

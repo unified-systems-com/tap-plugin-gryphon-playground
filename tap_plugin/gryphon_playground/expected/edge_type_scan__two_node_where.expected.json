@@ -4,6 +4,7 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-baf99158bb0c",
       "entity_type": "grid_fixtures__hub",
       "name": "Dense Hub",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -17,6 +18,7 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-bafb10535646",
       "entity_type": "grid_fixtures__node",
       "name": "Neighbor Two",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -30,6 +32,7 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-bafc00e2b0af",
       "entity_type": "grid_fixtures__node",
       "name": "Neighbor Three",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -45,6 +48,7 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-bb0135c1d515",
       "entity_type": "edge",
       "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafb10535646",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -58,6 +62,7 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-bb02a19297a0",
       "entity_type": "edge",
       "name": "019e4b02-f37b-72df-a3e5-baf99158bb0c --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-bafc00e2b0af",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },

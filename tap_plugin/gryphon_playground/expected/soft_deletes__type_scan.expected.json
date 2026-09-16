@@ -4,6 +4,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fcd6037b410",
       "entity_type": "grid_fixtures__node",
       "name": "Live One",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
@@ -17,6 +18,7 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fce5a1efac6",
       "entity_type": "grid_fixtures__node",
       "name": "Live Two",
+      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
