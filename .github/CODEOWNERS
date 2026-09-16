@@ -1,0 +1,7 @@
+# Code owners — the humans whose review a pull request into main needs.
+#
+# Load-bearing for the nightly ledger PR: the org allows GitHub Actions to OPEN pull
+# requests, and GitHub's single switch would let it approve them too. With this file
+# in place, `require_code_owner_review` on main means only an owner's approval counts,
+# so a bot's approval is inert by construction — Actions can propose, never ratify.
+*   @notgeorge
