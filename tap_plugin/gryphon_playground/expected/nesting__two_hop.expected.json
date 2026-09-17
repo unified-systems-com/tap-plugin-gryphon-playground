@@ -4,57 +4,41 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fd1935265b4",
       "entity_type": "grid_fixtures__hub",
       "name": "Nest Root",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fd20676235e",
       "entity_type": "grid_fixtures__node",
       "name": "Branch One",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fd4000cdc11",
       "entity_type": "grid_fixtures__leaf",
       "name": "Leaf One A",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fd5ff1349c3",
       "entity_type": "grid_fixtures__leaf",
       "name": "Leaf One B",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "edges": [
@@ -62,43 +46,31 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fd60cda42a3",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fd1935265b4 --[PG_NESTS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fd20676235e",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fd8127168ca",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fd20676235e --[PG_NESTS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fd4000cdc11",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fd930c004b7",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fd20676235e --[PG_NESTS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fd5ff1349c3",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "rows": []

@@ -4,43 +4,31 @@
       "entity_id": "019e6eab-d14d-7144-845c-2d49aac6c4f4",
       "entity_type": "grid_fixtures__node",
       "name": "Reading Two",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e6eab-d14d-7144-845c-2d4af229bba6",
       "entity_type": "grid_fixtures__node",
       "name": "Reading Three",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e6eab-d14d-7144-845c-2d4be9843ce6",
       "entity_type": "grid_fixtures__node",
       "name": "Reading Three-Tied",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "edges": []

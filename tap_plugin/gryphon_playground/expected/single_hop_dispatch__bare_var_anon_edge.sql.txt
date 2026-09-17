@@ -8,13 +8,13 @@ WHERE ("tap_entity"."deleted_at" IS NULL AND T3."entity_type" = %s AND T4."entit
 ORDER BY "tap_entity"."created_at" DESC
 -- params: ['grid_fixtures__hub', 'grid_fixtures__node']
 -- statement 2 · stage: single-hop
-SELECT "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", "tap_entity"."natural_key", "tap_entity"."dimensions", "tap_entity"."originating_grid_id", "tap_entity"."version", "tap_entity"."deleted_at", "tap_entity"."created_at", "tap_entity"."updated_at"
+SELECT <entity-spine-columns>
 FROM "tap_entity"
 WHERE "tap_entity"."id" IN (%s, %s, %s, %s)
 ORDER BY "tap_entity"."created_at" DESC
 -- params: [UUID('019e4b02-f37b-72df-a3e5-baf99158bb0c'), UUID('019e4b02-f37b-72df-a3e5-bafa7b3865a9'), UUID('019e4b02-f37b-72df-a3e5-bafb10535646'), UUID('019e4b02-f37b-72df-a3e5-bafc00e2b0af')]
 -- statement 3 · stage: single-hop
-SELECT "tap_edge"."id", "tap_edge"."entity_id", "tap_edge"."batch_id", "tap_edge"."flip_map", "tap_edge"."from_entity_id", "tap_edge"."to_entity_id", "tap_edge"."edge_type", "tap_edge"."properties", "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", "tap_entity"."natural_key", "tap_entity"."dimensions", "tap_entity"."originating_grid_id", "tap_entity"."version", "tap_entity"."deleted_at", "tap_entity"."created_at", "tap_entity"."updated_at"
+SELECT "tap_edge"."id", "tap_edge"."entity_id", "tap_edge"."batch_id", "tap_edge"."flip_map", "tap_edge"."from_entity_id", "tap_edge"."to_entity_id", "tap_edge"."edge_type", "tap_edge"."properties", <entity-spine-columns>
 FROM "tap_edge"
 INNER JOIN "tap_entity" ON ("tap_edge"."entity_id" = "tap_entity"."id")
 WHERE ("tap_entity"."deleted_at" IS NULL AND "tap_edge"."entity_id" IN (%s, %s, %s))
