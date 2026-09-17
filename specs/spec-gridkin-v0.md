@@ -173,10 +173,27 @@ intentionally slow — the priority is correctness signal, not test-suite speed.
 
 Envelope equality is structural, not literal: `nodes` and `edges` are compared
 as sets (a graph envelope's members are unordered, and the executor emits them
-in DB-discretion order), and volatile provenance fields (`created_at`,
-`updated_at`, `originating_grid_id`) are redacted before comparison — a scenario
-asserts what a query returns, not when its fixture was imported or on which
-grid. `rows` are compared in order.
+in DB-discretion order), and each member is projected down to the keys this
+corpus asserts — `entity_id`, `entity_type`, `name`, `dimensions`, `deleted_at`,
+`version`, and the `data` lane. `rows` are compared in order and are not
+projected: a RETURN projection is the query's own output and no spine key
+reaches it.
+
+The projection is what keeps this corpus out of core's business. A member
+arrives carrying the whole entity spine surface, so comparing all of it made
+Gridkin the oracle for `Entity.SPINE_FIELD_NAMES` — core could not change its
+own serialization contract without shipping a release of this plugin first
+(unified-systems-com/tap#487). The key list above is chosen from what a scenario
+is FOR — which rows come back, in what order, under what scoping — not copied
+from core's field list, because a copy is the same coupling wearing a shorter
+name. The rest of the surface is asserted in core, by
+`tap_grid/tests/test_core_serialization_contract.py`, so the detection moved to
+the side that owns the fact rather than disappearing.
+
+This supersedes an earlier volatile-field redaction: `created_at`, `updated_at`
+and `originating_grid_id` were rewritten to a `<volatile>` sentinel because they
+vary per run and per environment. Dropping them achieves that and more, and
+leaves one mechanism on this path instead of two.
 
 #### Acceptance Criteria
 
@@ -186,6 +203,7 @@ grid. `rows` are compared in order.
 | req-gridkin-runner-contract-2 | Per-Scenario Isolation | Implemented | Each scenario runs against a freshly-seeded test database; no inter-scenario state. | |
 | req-gridkin-runner-contract-3 | Envelope and SQL Asserted Separately | Implemented | A scenario can fail on envelope mismatch, SQL mismatch, or both — each is reported distinctly. | |
 | req-gridkin-runner-contract-4 | Uses Standard GRIFT Importer | Implemented | Fixtures load through the same path as real plugin GRIFT data — no Gridkin-specific seed shortcut. | |
+| req-gridkin-runner-contract-5 | Members Projected To A Declared Key Set | Implemented | Node and edge members are projected to `_ASSERTED_MEMBER_KEYS` before comparison and before a snapshot is written, so a change to core's entity spine surface does not red this corpus. `rows` are never projected. | Complement pinned in `tap` (unified-systems-com/tap#490); supersedes the volatile-spine-field redaction |
 
 ### Oracle Assertion Discipline
 ----
@@ -333,8 +351,27 @@ trivial formatting changes don't churn snapshots. Everything else — table name
 column names, JOIN structure, WHERE clauses, inlined values, the stage labels, and
 the block count and order — is asserted byte-exact after normalization.
 
-One volatile element is redacted, mirroring the envelope's volatile-spine-field
-redaction. A labelless `MATCH (n)` compiles to a bare type-scan whose WHERE
+Two elements are collapsed to sentinels, mirroring the envelope's declared
+member projection. Both are facts owned by something other than the query plan
+under test, and both are asserted where they belong instead.
+
+**The entity spine column enumeration.** Every statement that reaches the spine
+expands `tap_entity` to its full concrete column list, because the executor
+selects the model rather than a projection. That list is a property of the
+TABLE — Django's default column expansion — so it grows the moment a column is
+added to `Entity`, whatever core declares about its serialization surface, and
+no `SPINE_EXCLUDED` declaration in core can hold it back. Snapshotting it
+verbatim made one `Entity` column cost a corpus regeneration, a plugin release
+and a two-record boot-tier PR in `tap` (unified-systems-com/tap#487). The runner
+replaces the full run with an `<entity-spine-columns>` sentinel on both
+comparison sides and on regeneration. The run is DERIVED from
+`Entity._meta.concrete_fields` on every call rather than pinned, so it cannot
+disagree with the schema it describes; and because only the FULL run collapses,
+an executor that narrowed the spine select — `.only(...)`, a deferred field, a
+hand-built projection — does not collapse and still reds. A lone predicate on
+one entity column is untouched.
+
+**The registry enumeration.** A labelless `MATCH (n)` compiles to a bare type-scan whose WHERE
 enumerates **every registered node type** —
 `entity_type IN (%s, %s, … one per type …)`. That enumeration is an *environment
 fact*: it grows whenever any plugin (anywhere in the tree) registers a new node
@@ -358,6 +395,7 @@ returns, so a behavioral regression in the bare scan is still caught.
 | req-gridkin-explain-snapshot-3 | Failure Distinct From Envelope Failure | Implemented | SQL mismatch is reported as a distinct failure mode from envelope mismatch. | |
 | req-gridkin-explain-snapshot-4 | Multi-Statement Capture | Implemented | The `.sql.txt` side file holds one labelled block per `SELECT` the executor executes, in execution order; queries that run multiple statements capture all of them. | |
 | req-gridkin-explain-snapshot-5 | Registry Enumeration Redacted | Implemented | The labelless bare-type-scan's `entity_type IN (…)` enumeration of all registered node types is redacted to a `<entity-type-registry>` sentinel on both comparison sides and on regeneration, so the oracle is stable across node-type registry growth; the residual filter and the response envelope still assert behavior exactly. | Surgical: only the bare-type-scan emits `IN` on `entity_type` |
+| req-gridkin-explain-snapshot-6 | Entity Column Enumeration Collapsed | Implemented | The full `tap_entity` concrete-column run in a SELECT list is collapsed to an `<entity-spine-columns>` sentinel on both comparison sides and on regeneration. The run is derived from `Entity._meta.concrete_fields`, never pinned, so adding a column to `Entity` leaves every committed snapshot green; a narrowed spine select does not collapse and still reds. | Owned by `tap`, asserted by `test_core_serialization_contract.py` (unified-systems-com/tap#490) |
 
 ### Requirement Traceability
 ----
