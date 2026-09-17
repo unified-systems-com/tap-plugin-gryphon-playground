@@ -13,8 +13,16 @@ from pathlib import Path
 
 import pytest
 from tap_plugin.gryphon_playground.gridkin import coverage, loader, stage_coverage
-from tap_plugin.gryphon_playground.gridkin.loader import GridkinScenarioError, Scenario
-from tap_plugin.gryphon_playground.gridkin.runner import normalize_sql
+from tap_plugin.gryphon_playground.gridkin.loader import PLUGIN_ROOT, GridkinScenarioError, Scenario
+from tap_plugin.gryphon_playground.gridkin.runner import (
+    _ASSERTED_MEMBER_KEYS,
+    _ENTITY_COLUMNS_SENTINEL,
+    _canonical_envelope,
+    _project_member,
+    collapse_entity_columns,
+    entity_column_run,
+    normalize_sql,
+)
 
 from tap.jsonfiles import load_json_file, load_schema
 
@@ -348,3 +356,122 @@ class TestCoverageMatrix:
         report = coverage.render([_scenario("a", ("req-grid-traversal-lang-shape",))])
         assert "req-grid-traversal-exec-sql-capture" in report
         assert "Uncovered Gryphon-spec requirements" in report
+
+
+class TestEntityColumnCollapse:
+    """The `tap_entity` column enumeration is core's fact, collapsed to a sentinel.
+
+    The whole mechanism rests on `entity_column_run()` producing exactly the string
+    Django emits. If that derivation ever stops matching, the collapse becomes a
+    silent no-op and the corpus quietly re-acquires the coupling it was built to
+    shed — so these are positive controls, not shape checks.
+    """
+
+    def test_the_derived_run_is_what_django_actually_emits(self):
+        # The control. A derivation nothing compares against is a declaration, and a
+        # declaration that is false passes every check that only tests presence.
+        from tap_grid.models import Entity
+
+        compiled = str(Entity.objects.all().query)
+        assert entity_column_run() in compiled
+
+    def test_the_committed_corpus_carries_the_sentinel(self):
+        # Proves the collapse FIRED when the snapshots were written. A broken
+        # derivation regenerates literal columns and this fails.
+        sql_files = sorted(PLUGIN_ROOT.glob("expected/*.sql.txt"))
+        assert sql_files, "no committed SQL snapshots found"
+        with_sentinel = [p for p in sql_files if _ENTITY_COLUMNS_SENTINEL in p.read_text(encoding="utf-8")]
+        assert with_sentinel, (
+            f"no committed .sql.txt carries {_ENTITY_COLUMNS_SENTINEL}. Either the corpus has not "
+            "been regenerated since the collapse landed, or entity_column_run() no longer matches "
+            "what Django emits and the collapse is a silent no-op."
+        )
+
+    def test_no_committed_snapshot_still_names_the_full_column_run(self):
+        run = entity_column_run()
+        offenders = [p.name for p in PLUGIN_ROOT.glob("expected/*.sql.txt") if run in p.read_text(encoding="utf-8")]
+        assert not offenders, (
+            "these snapshots still pin core's full entity column list, so an Entity column "
+            f"change would red them: {offenders}"
+        )
+
+    def test_a_narrowed_select_does_not_collapse(self):
+        # THE ANTI-VACUUM. Only the full run collapses, so an executor that narrowed
+        # the spine select — .only(), a deferred field, a hand-built projection — is a
+        # real query-plan change and still reds against a sentinel-bearing oracle.
+        narrowed = ", ".join(entity_column_run().split(", ")[:2])
+        assert collapse_entity_columns(f"SELECT {narrowed} FROM tap_entity") == f"SELECT {narrowed} FROM tap_entity"
+
+    def test_a_predicate_on_one_entity_column_is_untouched(self):
+        where = 'WHERE "tap_entity"."deleted_at" IS NULL'
+        assert collapse_entity_columns(where) == where
+
+    def test_collapse_is_idempotent(self):
+        once = collapse_entity_columns(f"SELECT {entity_column_run()} FROM x")
+        assert collapse_entity_columns(once) == once
+        assert _ENTITY_COLUMNS_SENTINEL in once
+
+
+class TestMemberProjection:
+    """A member envelope asserts a declared key set, not core's spine surface."""
+
+    def _member(self, **overrides):
+        member = {
+            "entity_id": "019e6eab-0000-7000-8000-000000000001",
+            "entity_type": "grid_fixtures__node",
+            "name": "Reading One",
+            "natural_key": None,
+            "dimensions": {"tap.playground": "gridkin"},
+            "created_at": "2026-09-16T00:00:00Z",
+            "updated_at": "2026-09-16T00:00:00Z",
+            "deleted_at": None,
+            "version": 1,
+            "originating_grid_id": "019e6eab-0000-7000-8000-00000000000a",
+        }
+        member.update(overrides)
+        return member
+
+    def test_keeps_exactly_the_asserted_keys(self):
+        assert set(_project_member(self._member())) == set(_ASSERTED_MEMBER_KEYS) - {"data"}
+
+    def test_drops_the_spine_keys_core_owns(self):
+        projected = _project_member(self._member())
+        for key in ("natural_key", "created_at", "updated_at", "originating_grid_id"):
+            assert key not in projected
+
+    def test_a_new_core_spine_key_does_not_reach_the_comparison(self):
+        # The point of the whole change: core can add to its serialization surface
+        # without reddening this corpus. The complement is pinned in tap by
+        # tap_grid/tests/test_core_serialization_contract.py.
+        projected = _project_member(self._member(some_future_spine_field="x"))
+        assert "some_future_spine_field" not in projected
+
+    def test_the_data_lane_survives(self):
+        projected = _project_member(self._member(data={"kind": "reading"}))
+        assert projected["data"] == {"kind": "reading"}
+
+    def test_rows_are_not_projected(self):
+        envelope = {"nodes": [], "edges": [], "rows": [{"n.name": "Reading One", "count": 3}]}
+        assert _canonical_envelope(envelope)["rows"] == [{"n.name": "Reading One", "count": 3}]
+
+    def test_members_are_projected_and_sorted_by_entity_id(self):
+        high = self._member(entity_id="019e6eab-0000-7000-8000-00000000000f", name="High")
+        low = self._member(entity_id="019e6eab-0000-7000-8000-000000000001", name="Low")
+        canonical = _canonical_envelope({"nodes": [high, low], "edges": []})
+        assert [m["name"] for m in canonical["nodes"]] == ["Low", "High"]
+        assert all("natural_key" not in m for m in canonical["nodes"])
+
+    def test_no_committed_envelope_carries_a_key_outside_the_projection(self):
+        allowed = set(_ASSERTED_MEMBER_KEYS)
+        offenders: dict[str, set[str]] = {}
+        for path in sorted(PLUGIN_ROOT.glob("expected/*.expected.json")):
+            document = json.loads(path.read_text(encoding="utf-8"))
+            for lane in ("nodes", "edges"):
+                for member in document.get(lane) or []:
+                    extra = set(member) - allowed
+                    if extra:
+                        offenders.setdefault(path.name, set()).update(extra)
+        assert not offenders, (
+            "these committed envelopes still carry spine keys this corpus does not assert, "
+            f"so a core serialization change would red them: { {k: sorted(v) for k, v in offenders.items()} }"
+        )
