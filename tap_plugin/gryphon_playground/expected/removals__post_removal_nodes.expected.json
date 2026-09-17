@@ -4,29 +4,21 @@
       "entity_id": "019e6563-ddae-75f4-b3d8-b4c044a626bc",
       "entity_type": "grid_fixtures__node",
       "name": "Removal Demo Node A",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e6563-ddae-75f4-b3d8-b4c177be88c8",
       "entity_type": "grid_fixtures__node",
       "name": "Removal Demo Node B",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "edges": []

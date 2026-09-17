@@ -62,7 +62,7 @@ def normalize_sql(text: str) -> str:
 # not a property of the query plan under test. Snapshotting it verbatim makes the
 # two labelless-scan oracles churn on every new entity type for no behavioral
 # reason, so it is redacted to a stable sentinel before comparison: the SQL
-# analogue of the envelope's volatile-spine-field redaction (`_VOLATILE_SPINE_FIELDS`).
+# analogue of the envelope's declared member projection (`_ASSERTED_MEMBER_KEYS`).
 # The residual filter (`= %s` / `LIKE %s`), the IN-on-`entity_type` shape itself,
 # and every other clause are still asserted exactly — and the envelope assertion
 # still verifies the rows the scan actually returns. Only this exact column with an
@@ -95,6 +95,71 @@ def redact_registry_scan(text: str) -> str:
         return "-- params: " + repr([_REGISTRY_SENTINEL, *residual])
 
     return _PARAMS_LINE_RE.sub(_trim_params, text, count=1)
+
+
+# ---------------------------------------------------------------------------
+# The entity spine column enumeration: CORE's fact, not this corpus's
+# ---------------------------------------------------------------------------
+#
+# Every statement that reaches the spine expands `tap_entity` to its full concrete
+# column list, because the executor selects the model rather than a projection:
+#
+#   SELECT "tap_entity"."id", "tap_entity"."entity_type", "tap_entity"."name", …
+#
+# That list is a property of the TABLE. It is not `Entity.SPINE_FIELD_NAMES`, not
+# `build_spine_surface`, and not anything a declaration in core can hold back — it
+# is Django's default column expansion, so it grows the moment a column is added
+# whatever core says about the serialization surface. Snapshotting it verbatim made
+# one `Entity` column cost a corpus regeneration, a plugin release and a two-record
+# boot-tier PR in `tap` (unified-systems-com/tap#487; observed on tap#480, where the
+# `SPINE_EXCLUDED` escape hatch did nothing for the 74 `.sql.txt` files that name the
+# columns).
+#
+# Same class of fact as the registry enumeration above, arriving from a different
+# owner: core rather than the type registry. Collapsed the same way, to a sentinel on
+# both comparison sides and on regeneration.
+#
+# The collapse is deliberately EXACT-RUN rather than pattern-based, and that is what
+# keeps it from going vacuous:
+#
+#   - The run is DERIVED from the live model (`Entity._meta.concrete_fields`), never
+#     copied. A column added in core changes the derivation and the emitted SQL in the
+#     same breath, so the two keep matching and the corpus stays green.
+#   - Because only the FULL run collapses, an executor that narrowed the spine select
+#     to a subset — `.only(...)`, a deferred field, a hand-built projection — does not
+#     collapse, does not match a sentinel-bearing oracle, and REDS. That is a real
+#     query-plan change and this corpus is still the thing that catches it.
+#   - A lone `"tap_entity"."deleted_at" IS NULL` in a WHERE clause is not part of the
+#     run and is untouched: predicates are still asserted byte-for-byte.
+#
+# `TestEntityColumnCollapse` in tests/test_gridkin_internals.py holds the positive
+# control — a derivation that stopped matching what Django emits would make this a
+# silent no-op, which is the failure mode a redaction has to be guarded against.
+_ENTITY_COLUMNS_SENTINEL = "<entity-spine-columns>"
+
+
+def entity_column_run() -> str:
+    """The exact SELECT-list run Django emits for a full `tap_entity` expansion.
+
+    Derived from the live model on every call rather than pinned, so this function
+    cannot disagree with the schema it describes — the one fact, one home rule. The
+    order is the model's field-definition order, which is what Django emits and what
+    the committed snapshots were written from.
+    """
+    from tap_grid.models import Entity
+
+    table = Entity._meta.db_table
+    return ", ".join(f'"{table}"."{field.column}"' for field in Entity._meta.concrete_fields)
+
+
+def collapse_entity_columns(text: str) -> str:
+    """Replace each full `tap_entity` column enumeration with a stable sentinel.
+
+    Idempotent: an already-collapsed oracle contains no run to find, so re-applying
+    is a no-op — the obligation `collapse_type_scan_fanout` records for itself, and
+    the reason both sides of the comparison can share one pipeline.
+    """
+    return text.replace(entity_column_run(), _ENTITY_COLUMNS_SENTINEL)
 
 
 # ---------------------------------------------------------------------------
@@ -450,22 +515,63 @@ def _seed_fixture(scenario: Scenario) -> None:
             raise AssertionError(f"{scenario.scenario_id}: soft-delete of {entity_id} failed: {delete_result.errors}")
 
 
-# Spine fields that carry provenance, not query semantics: the import-time
-# timestamps and the originating grid id. They vary per run and per
-# environment, so the runner redacts them to a sentinel before comparing or
-# writing a snapshot — a Gridkin scenario asserts what a query returns, not
-# when the fixture was imported or on which grid.
-_VOLATILE_SPINE_FIELDS = ("created_at", "updated_at", "originating_grid_id")
-_REDACTED = "<volatile>"
+# ---------------------------------------------------------------------------
+# What a member envelope asserts: a DECLARED projection, not core's surface
+# ---------------------------------------------------------------------------
+#
+# A node/edge member arrives carrying the whole entity spine surface, because that
+# is what `build_spine_surface` emits. Comparing all of it made this corpus the
+# oracle for `Entity.SPINE_FIELD_NAMES` — so adding one column to core's
+# serialization surface reddened every scenario at once, and core could not change
+# its own contract without shipping a release of this plugin first
+# (unified-systems-com/tap#487).
+#
+# The keys below are what a GRIDKIN SCENARIO IS FOR: which rows a query returns, in
+# what order, under what scoping. They are chosen from that purpose, not copied from
+# core's field list — a copy would be the same coupling wearing a shorter name.
+#
+#   entity_id    identity; the thing a scenario is asserting came back
+#   entity_type  which type came back — the whole point of a bare or labelled match
+#   name         the readable value scenarios filter and order on
+#   dimensions   scoping; several scenarios turn on dimension containment
+#   deleted_at   liveness. Always null in a result, and asserting that is how the
+#                corpus proves the live-only filter is applied rather than assumed
+#   version      write behaviour: the soft-delete scenarios observe it move
+#   data         the data lane, when the query projects one — plugin-owned, and the
+#                one member key that is not core's
+#
+# Everything else on the surface is core's fact and is asserted in core, by
+# `tap_grid/tests/test_core_serialization_contract.py` (unified-systems-com/tap#490),
+# which pins the column lists and the spine surface as literals. The detection moved
+# to the side that owns the fact; it did not disappear. That distinction is the whole
+# argument — tap#487 explicitly REJECTS "let the oracle ignore unknown spine keys",
+# because an oracle that tolerates whatever arrives has stopped asserting. A declared
+# projection whose complement is pinned elsewhere is a different thing: the fact keeps
+# exactly one home.
+#
+# This SUPERSEDES the older volatile-field redaction. `created_at`, `updated_at` and
+# `originating_grid_id` were rewritten to a `<volatile>` sentinel because they vary
+# per run and per environment; dropping them achieves that and more, and leaves one
+# mechanism on this path instead of two. Their presence on the surface is pinned in
+# core along with the rest of it.
+#
+# `rows` are deliberately NOT projected: a RETURN projection is the query's own
+# output, authored by the scenario, and no spine key reaches it (verified across the
+# corpus). It is compared whole, in order.
+_ASSERTED_MEMBER_KEYS = (
+    "entity_id",
+    "entity_type",
+    "name",
+    "dimensions",
+    "deleted_at",
+    "version",
+    "data",
+)
 
 
-def _redact_member(member: dict[str, Any]) -> dict[str, Any]:
-    """Copy a node/edge envelope with volatile provenance fields redacted."""
-    redacted = dict(member)
-    for field in _VOLATILE_SPINE_FIELDS:
-        if field in redacted:
-            redacted[field] = _REDACTED
-    return redacted
+def _project_member(member: dict[str, Any]) -> dict[str, Any]:
+    """Copy a node/edge envelope down to the keys this corpus asserts."""
+    return {key: member[key] for key in _ASSERTED_MEMBER_KEYS if key in member}
 
 
 def _canonical_envelope(envelope: dict[str, Any]) -> dict[str, Any]:
@@ -474,20 +580,22 @@ def _canonical_envelope(envelope: dict[str, Any]) -> dict[str, Any]:
     - `nodes` and `edges` are sorted by entity_id: a graph envelope's member
       lists are sets, and the executor emits them in DB-discretion order (the
       hub-and-spoke neighbor fetch, for one, has no ORDER BY).
-    - Volatile provenance fields (import timestamps, originating grid id) are
-      redacted to a sentinel on every member — see `_VOLATILE_SPINE_FIELDS`.
+    - Every member is projected down to the keys this corpus asserts — see
+      `_ASSERTED_MEMBER_KEYS`. The rest of the spine surface is core's fact and
+      is pinned in core, so a column added there does not red this corpus.
     - `rows` (RETURN projection / aggregation output) is left untouched: its
-      order can carry meaning and it has no volatile spine fields.
+      order can carry meaning and no spine key reaches it.
 
     Applied to both sides of every comparison and to the written snapshot, so
-    the committed expected file is stable across runs and environments.
+    the committed expected file is stable across runs and environments, and is
+    exactly what the comparison asserts.
     """
     canonical = dict(envelope)
     for key in ("nodes", "edges"):
         members = canonical.get(key)
         if isinstance(members, list):
-            redacted = [_redact_member(m) for m in members]
-            canonical[key] = sorted(redacted, key=lambda m: str(m.get("entity_id", "")))
+            projected = [_project_member(m) for m in members]
+            canonical[key] = sorted(projected, key=lambda m: str(m.get("entity_id", "")))
     return canonical
 
 
@@ -513,8 +621,13 @@ def _check_envelope(scenario: Scenario, actual: dict[str, Any]) -> list[str]:
 
 
 def _normalize_for_compare(text: str) -> str:
-    """The full comparison pipeline: whitespace, registry enumeration, per-type fan-out."""
-    collapsed, _tables = collapse_type_scan_fanout(redact_registry_scan(normalize_sql(text)))
+    """The full comparison pipeline: whitespace, registry enumeration, entity spine columns, per-type fan-out.
+
+    Applied to both sides of every SQL comparison and to the written snapshot, so the
+    committed oracle is exactly what is asserted — nothing is hidden at compare time
+    that the file still appears to claim.
+    """
+    collapsed, _tables = collapse_type_scan_fanout(collapse_entity_columns(redact_registry_scan(normalize_sql(text))))
     return collapsed if collapsed.endswith("\n") else collapsed + "\n"
 
 

@@ -4,29 +4,21 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-bafef82d1e41",
       "entity_type": "grid_fixtures__node",
       "name": "Island Alpha",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4b02-f37b-72df-a3e5-baff05e4468a",
       "entity_type": "grid_fixtures__node",
       "name": "Island Beta",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "edges": [
@@ -34,15 +26,11 @@
       "entity_id": "019e4b02-f37b-72df-a3e5-bb03299640b0",
       "entity_type": "edge",
       "name": "019e4b02-f37b-72df-a3e5-bafef82d1e41 --[PG_LINKS__grid_fixtures]--> 019e4b02-f37b-72df-a3e5-baff05e4468a",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ]
 }

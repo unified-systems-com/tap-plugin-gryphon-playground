@@ -4,43 +4,31 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fbf70e51757",
       "entity_type": "grid_fixtures__node",
       "name": "Cycle A",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fc0ad869bfa",
       "entity_type": "grid_fixtures__node",
       "name": "Cycle B",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fc171d1a72d",
       "entity_type": "grid_fixtures__node",
       "name": "Cycle C",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "edges": [
@@ -48,43 +36,31 @@
       "entity_id": "019e4e07-9975-7501-8d81-0fc3a152f103",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fbf70e51757 --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc0ad869bfa",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fc4e4a98242",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fc0ad869bfa --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc171d1a72d",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4e07-9975-7501-8d81-0fc53fb5e766",
       "entity_type": "edge",
       "name": "019e4e07-9975-7501-8d81-0fc171d1a72d --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fbf70e51757",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "rows": []

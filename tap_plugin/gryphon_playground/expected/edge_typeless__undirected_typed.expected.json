@@ -4,29 +4,21 @@
       "entity_id": "019e4da0-8a10-7418-b229-c1ba2ceca9a7",
       "entity_type": "grid_fixtures__node",
       "name": "Target One",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     },
     {
       "entity_id": "019e4da0-8a10-7418-b229-c1bd7fffc884",
       "entity_type": "grid_fixtures__node",
       "name": "Guard",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ],
   "edges": [
@@ -34,15 +26,11 @@
       "entity_id": "019e4da0-8a11-77ca-9976-97d98253aedd",
       "entity_type": "edge",
       "name": "019e4da0-8a10-7418-b229-c1bd7fffc884 --[PG_OPTIONAL__grid_fixtures]--> 019e4da0-8a10-7418-b229-c1ba2ceca9a7",
-      "natural_key": null,
       "dimensions": {
         "tap.playground": "gridkin"
       },
-      "created_at": "<volatile>",
-      "updated_at": "<volatile>",
       "deleted_at": null,
-      "version": 1,
-      "originating_grid_id": "<volatile>"
+      "version": 1
     }
   ]
 }
