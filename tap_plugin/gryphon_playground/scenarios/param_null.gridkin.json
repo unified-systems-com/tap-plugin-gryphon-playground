@@ -1,0 +1,90 @@
+{
+  "feature": "Input-null predicate — `$p IS [NOT] NULL`, the optional filter that does not constrain when its input is null",
+  "background": {
+    "grift_fixture": "fixtures/dimensions.grift.json"
+  },
+  "scenarios": [
+    {
+      "name": "a supplied null widens the query and the optional filter leaves the plan entirely",
+      "tags": [
+        "param-null",
+        "optional-filter",
+        "dimensions"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-param-null",
+        "req-grid-traversal-lang-param-null-2",
+        "req-grid-traversal-lang-param-null-4"
+      ],
+      "note": "The demand shape: an optional `?zone=` filter that, unset, returns everything. All four fixture nodes come back. The load-bearing half is the SQL snapshot — a withdrawn filter must LEAVE THE PLAN, not lower as a no-op, so this snapshot carries no `dimensions` predicate at all and is the same plan the WHERE-less query emits. ORACLE SKIP, stated so nobody reads the green as differential coverage. `_fold_ast_param_predicates` runs inside the EXECUTOR, downstream of `parse_gryphon`, so the Gridkin runner hands model_oracle.py the UNFOLDED tree and `eval_predicate` ends at `raise OracleUnmodeled('predicate leaf ParamNullTest')`. That is a fail-closed skip, never a fake green: the envelope and SQL snapshots below are the only assertions running here. It closes the day the oracle grows a ParamNullTest branch.",
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: `$p IS NULL` is a predicate about an INPUT; openCypher has no parameter-existence predicate)",
+      "layer": "lite",
+      "query": "MATCH (n:grid_fixtures__node) WHERE $zone IS NULL OR n.dimensions.zone = $zone",
+      "params": {
+        "zone": null
+      },
+      "expected_envelope": "expected/param_null__null_widens.expected.json",
+      "expected_sql_snapshot": "expected/param_null__null_widens.sql.txt"
+    },
+    {
+      "name": "a supplied value narrows the same query to the matching dimension",
+      "tags": [
+        "param-null",
+        "optional-filter",
+        "dimensions"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-param-null",
+        "req-grid-traversal-lang-param-null-4"
+      ],
+      "note": "The other direction of the same query text — two nodes carry zone=north. Paired with param_null__null_widens this is the whole construct effect: same query, different input, different plan AND different answer. ORACLE SKIP, stated so nobody reads the green as differential coverage. `_fold_ast_param_predicates` runs inside the EXECUTOR, downstream of `parse_gryphon`, so the Gridkin runner hands model_oracle.py the UNFOLDED tree and `eval_predicate` ends at `raise OracleUnmodeled('predicate leaf ParamNullTest')`. That is a fail-closed skip, never a fake green: the envelope and SQL snapshots below are the only assertions running here. It closes the day the oracle grows a ParamNullTest branch.",
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: `$p IS NULL` is a predicate about an INPUT; openCypher has no parameter-existence predicate)",
+      "layer": "lite",
+      "query": "MATCH (n:grid_fixtures__node) WHERE $zone IS NULL OR n.dimensions.zone = $zone",
+      "params": {
+        "zone": "north"
+      },
+      "expected_envelope": "expected/param_null__value_narrows.expected.json",
+      "expected_sql_snapshot": "expected/param_null__value_narrows.sql.txt"
+    },
+    {
+      "name": "an empty string is a value, not a null, and matches only a literally-empty dimension",
+      "tags": [
+        "param-null",
+        "optional-filter",
+        "dimensions",
+        "empty-result"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-param-null-5"
+      ],
+      "note": "Absent vs null vs empty string is the whole feature. `\"\"` CONSTRAINS: no fixture node has an empty `zone`, so the envelope is empty — and non-vacuously so, because the SQL snapshot carries the empty-string literal against the zone path rather than the widened no-filter plan. A caller wiring a blank `?zone=` maps it to None itself. ORACLE SKIP, stated so nobody reads the green as differential coverage. `_fold_ast_param_predicates` runs inside the EXECUTOR, downstream of `parse_gryphon`, so the Gridkin runner hands model_oracle.py the UNFOLDED tree and `eval_predicate` ends at `raise OracleUnmodeled('predicate leaf ParamNullTest')`. That is a fail-closed skip, never a fake green: the envelope and SQL snapshots below are the only assertions running here. It closes the day the oracle grows a ParamNullTest branch.",
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: `$p IS NULL` is a predicate about an INPUT; openCypher has no parameter-existence predicate)",
+      "layer": "lite",
+      "query": "MATCH (n:grid_fixtures__node) WHERE $zone IS NULL OR n.dimensions.zone = $zone",
+      "params": {
+        "zone": ""
+      },
+      "expected_envelope": "expected/param_null__empty_string_is_a_value.expected.json",
+      "expected_sql_snapshot": "expected/param_null__empty_string_is_a_value.sql.txt"
+    },
+    {
+      "name": "an absent param is still a hard error even when it is only ever null-tested",
+      "tags": [
+        "param-null",
+        "rejection"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-param-null-3"
+      ],
+      "note": "The guard that makes the feature safe. Treating ABSENCE as null would silently widen the query to EVERYTHING whenever a caller forgot to wire the filter — the plausible, alarmless wrong answer. A param named in a query stays required; only a SUPPLIED None withdraws the filter. This scenario supplies no params at all, which is exactly the forgot-to-wire-it shape. VACUITY TRAP, measured and closed: `explain_gryphon_raw` wraps a GryphonParseError into a SearchExecutionError too, so with the whole `$p IS [NOT] NULL` grammar reverted this scenario still saw a SearchExecutionError and passed on the TYPE alone — a green that proved nothing. `message_contains` pins the required-inputs diagnostic specifically; do not relax it to the bare type.",
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: `$p IS NULL` is a predicate about an INPUT; openCypher has no parameter-existence predicate)",
+      "layer": "lite",
+      "query": "MATCH (n:grid_fixtures__node) WHERE $zone IS NULL OR n.dimensions.zone = $zone",
+      "expected_error": {
+        "type": "SearchExecutionError",
+        "message_contains": "requires inputs ['zone'] but they were not provided"
+      }
+    }
+  ]
+}

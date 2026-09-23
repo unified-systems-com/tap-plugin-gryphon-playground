@@ -442,21 +442,59 @@ def _gen_chain(rng: random.Random, vals: _Values) -> str:
     fixed by folding the WHERE into the chain's single `.filter()`
     (`_build_chain_queryset`); the `far_node_where` gridkin scenarios regression-
     lock it and the generator exercises the path here.
-    """
-    node_vars = ["a", "b"]
-    pattern = (
-        f"MATCH (a:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
-        f"{_edge_step(rng)}(b:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
-    )
-    two_hop = rng.random() < 0.3
-    if two_hop:
-        pattern += f"{_edge_step(rng)}(c:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
-        node_vars.append("c")
 
-    # Nodes past the root edge (index ≥ 2) bind through a multi-valued reverse-FK
-    # hop; a negation over their predicate (`NOT`, or `!=`) is executor-rejected,
-    # so generate their leaves on the positive far-node surface only.
-    far_vars = set(node_vars[2:])
+    **In-pattern variable reuse** (`req-grid-traversal-lang-shape-9`). One name in
+    two node positions of ONE pattern is a JOIN — `MATCH (a)-[..]->(b)-[..]->(a)`
+    asks for a closed walk, not a free third node. It was accepted and answered a
+    superset (tap#743, fixed in `_repeated_variable_equality_filters`), and this
+    generator could not ask the question at all: the position names were the hard-
+    coded literals `a`/`b`/`c`, so a repeat was unreachable by construction — a
+    differential lane blind to the shape by grammar, not by luck. The last position
+    now sometimes re-mentions an earlier name.
+
+    The repeat is emitted BARE — `(a)`, no label and no inline map. The label and
+    map already constrain that entity at its first position, and re-stating a
+    *different* label there would make the pattern unsatisfiable, so every
+    generated reuse would be a vacuous empty-vs-empty agreement. Bare keeps the
+    case discriminating.
+
+    Two adjacent reuse shapes are deliberately NOT generated, because the
+    executor REFUSES them and a refusal is not a differential: one name across a
+    node and an edge position, and OPTIONAL MATCH reusing its mandatory variable.
+    Those belong to the rejection corpus.
+
+    No `$param` predicate is generated here, and that is a decision rather than an
+    omission. `$p IS [NOT] NULL` (`req-grid-traversal-lang-param-null`) is folded
+    out of the AST by the *executor's* `_fold_ast_param_predicates`, at a
+    chokepoint downstream of `parse_gryphon` — so the oracle is handed the
+    UNFOLDED tree and `eval_predicate` ends at `raise OracleUnmodeled(...)` on the
+    `ParamNullTest` leaf. Generating the construct today would therefore produce
+    100% skipped differentials: pure cost, zero signal. It becomes worth
+    generating the moment the oracle grows a `ParamNullTest` branch, not before.
+    """
+    positions = ["a", "b"]
+    if rng.random() < 0.3:  # two-hop
+        positions.append("c")
+    if rng.random() < 0.25:  # in-pattern variable reuse
+        positions[-1] = rng.choice(positions[:-1])
+
+    node_vars = list(dict.fromkeys(positions))  # distinct, first-appearance order
+    first_at = {v: positions.index(v) for v in node_vars}
+
+    pattern = f"MATCH ({positions[0]}:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+    for idx in range(1, len(positions)):
+        var = positions[idx]
+        step = _edge_step(rng)
+        if idx > first_at[var]:
+            pattern += f"{step}({var})"  # repeat occurrence: bare re-mention
+        else:
+            pattern += f"{step}({var}:{rng.choice(_LABELS)}{_gen_inline_map(rng, vals)})"
+
+    # Nodes past the root edge (first bound at position ≥ 2) bind through a
+    # multi-valued reverse-FK hop; a negation over their predicate (`NOT`, or
+    # `!=`) is executor-rejected, so generate their leaves on the positive
+    # far-node surface only. A reused name is scoped by where it FIRST binds.
+    far_vars = {v for v in node_vars if first_at[v] >= 2}
     where_parts = [f"({_gen_predicate(rng, v, vals, far=v in far_vars)})" for v in node_vars if rng.random() < 0.5]
     if where_parts:
         pattern += " WHERE " + " AND ".join(where_parts)
@@ -466,7 +504,10 @@ def _gen_chain(rng: random.Random, vals: _Values) -> str:
         return pattern + " RETURN " + ", ".join(node_vars)  # must name ALL bound vars
     if mode == "proj":
         return pattern + " RETURN " + ", ".join(_projection(rng, v) for v in node_vars)
-    if mode == "agg":
+    if mode == "agg" and len(node_vars) > 1:
+        # Reuse can collapse a chain to ONE distinct variable (`(a)-[..]->(a)`);
+        # counting the grouping key itself is a different question, so fall
+        # through to the envelope form rather than generate it here.
         anchor, counted = node_vars[0], node_vars[-1]
         return pattern + f" RETURN {anchor}.entity_id AS aid, COUNT({counted}) AS c"
     return pattern  # envelope (RETURN omitted)
