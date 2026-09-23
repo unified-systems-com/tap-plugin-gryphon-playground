@@ -10,12 +10,16 @@
         "type-scan",
         "where",
         "dimensions",
+        "envelope-paths-9",
+        "boundary",
         "current-behavior"
       ],
       "covers": [
         "req-grid-traversal-lang-envelope-paths-7",
+        "req-grid-traversal-lang-envelope-paths-9",
         "req-grid-traversal-lang-filters"
       ],
+      "note": "This is also the BOUNDARY pin for `req-grid-traversal-lang-envelope-paths-9`. The refusal of a multi-step dimension path begins at the SECOND step, so one step stays legal in either spelling and `n.dimensions.zone` must keep working. A fix that refused every dot-step rather than every path of more than one step would go red here.",
       "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: Entity dimension scoping)",
       "layer": "full",
       "query": "MATCH (n:grid_fixtures__node) WHERE n.dimensions.zone = \"north\"",
@@ -23,36 +27,37 @@
       "expected_sql_snapshot": "expected/dimensions__zone_north.sql.txt"
     },
     {
-      "name": "a dotted path into dimensions names ONE flat key and matches the dotted dimension",
+      "name": "a dotted path into dimensions is refused, naming the bracketed form",
       "tags": [
         "dimensions",
-        "dot-run",
+        "rejection",
         "envelope-paths-9"
       ],
       "covers": [
         "req-grid-traversal-lang-envelope-paths-9",
         "req-grid-traversal-lang-filters"
       ],
-      "note": "`tap.playground` is a real dotted TAP dimension key and every node in this fixture carries it, so a correct lowering returns all four. Before req-grid-traversal-lang-envelope-paths-9 the dot spelling lowered each step separately — `dimensions #> ARRAY['tap','playground']`, a NESTED path no conformant flat `dimensions` value can hold — and under 3VL the missing path was NULL, so the query returned a clean, alarmless ZERO rows. Four-vs-zero is the assertion; do not reshape this onto the undotted `zone` key, which cannot tell the two lowerings apart.",
+      "note": "`tap.playground` is a real dotted TAP dimension key that every node in this fixture carries, so this query would match all four if the dotted spelling were honoured. It must RAISE instead. Ruled 2026-09-23 by the owner (Issue# 781 - tap, option a; normative statement req-grid-dimension-query-form in spec-grid-dimension.md): more than one step after `dimensions` is refused with an error naming the bracketed form. Before the fix this returned a clean, alarmless ZERO rows — `dimensions #> ARRAY['tap','playground']`, a NESTED path no conformant flat `dimensions` value can hold, NULL under 3VL. Raise-vs-zero is the assertion; do not reshape this onto the undotted `zone` key, which cannot tell the two lowerings apart.",
       "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: dimensions is a TAP spine field with no TCK analogue)",
       "layer": "lite",
       "query": "MATCH (n:grid_fixtures__node) WHERE n.dimensions.tap.playground = \"gridkin\"",
-      "expected_envelope": "expected/dimensions__dot_run_key.expected.json",
-      "expected_sql_snapshot": "expected/dimensions__dot_run_key.sql.txt"
+      "expected_error": {
+        "type": "SearchExecutionError",
+        "message_contains": "[\"tap.playground\"]"
+      }
     },
     {
-      "name": "the bracket spelling of the same dotted key is the same lookup",
+      "name": "the bracketed spelling of a dotted key is the one correct form",
       "tags": [
         "dimensions",
-        "dot-run",
         "envelope-paths-9",
-        "equivalence"
+        "bracket"
       ],
       "covers": [
         "req-grid-traversal-lang-envelope-paths-9",
         "req-grid-traversal-lang-filters"
       ],
-      "note": "The equivalence half of envelope-paths-9: `n.dimensions.tap.playground` and `n.dimensions[\"tap.playground\"]` MUST be the same lookup. Its SQL snapshot is byte-identical to dimensions__dot_run_key.sql.txt apart from the two spellings sharing one plan — `cmp` the two files when either changes. The bracket spelling was always correct; it is here as the fixed point the dotted spelling had to be moved onto.",
+      "note": "The positive half of envelope-paths-9, and the pin for `req-grid-dimension-query-form-1`: `n.dimensions[\"tap.playground\"]` matches the entities carrying that flat key. Paired with the rejection scenario above it also pins `req-grid-dimension-query-form-3` (never reinterpreted): the bracketed text matches while the dotted text raises, so there is no whole-key-first fallback. This spelling was always correct — it is now the only one.",
       "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: dimensions is a TAP spine field with no TCK analogue)",
       "layer": "lite",
       "query": "MATCH (n:grid_fixtures__node) WHERE n.dimensions[\"tap.playground\"] = \"gridkin\"",
@@ -60,22 +65,39 @@
       "expected_sql_snapshot": "expected/dimensions__bracket_key.sql.txt"
     },
     {
-      "name": "a dotted dimension key that no node carries returns an empty envelope, not a silent one",
+      "name": "a bracketed dimension key that no node carries returns an empty envelope, not an error",
       "tags": [
         "dimensions",
-        "dot-run",
         "envelope-paths-9",
-        "empty-result"
+        "bracket"
       ],
       "covers": [
         "req-grid-traversal-lang-envelope-paths-9"
       ],
-      "note": "The non-matching companion. The defect's whole danger was that a WRONG lowering also returns zero rows, so an empty expected envelope proves nothing on its own — the SQL snapshot carrying the literal `'nope'` against the SAME flat-key path as the matching scenario is what makes this empty non-vacuous.",
+      "note": "The refusal is about the PATH SHAPE, not about whether the key exists. A correctly-spelled key that simply matches nothing is still an ordinary empty result — absent, not an error. Without this pin a fix that refused too much would look correct.",
       "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: dimensions is a TAP spine field with no TCK analogue)",
       "layer": "lite",
-      "query": "MATCH (n:grid_fixtures__node) WHERE n.dimensions.tap.playground = \"nope\"",
-      "expected_envelope": "expected/dimensions__dot_run_no_match.expected.json",
-      "expected_sql_snapshot": "expected/dimensions__dot_run_no_match.sql.txt"
+      "query": "MATCH (n:grid_fixtures__node) WHERE n.dimensions[\"tap.playground\"] = \"nope\"",
+      "expected_envelope": "expected/dimensions__bracket_no_match.expected.json",
+      "expected_sql_snapshot": "expected/dimensions__bracket_no_match.sql.txt"
+    },
+    {
+      "name": "bracketed nesting into dimensions is refused too — steps are counted, not dots",
+      "tags": [
+        "dimensions",
+        "rejection",
+        "envelope-paths-9"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-envelope-paths-9"
+      ],
+      "note": "`req-grid-traversal-lang-envelope-paths-9` counts STEPS. `dimensions` holds no nested object, so a second step is meaningless whichever way it is spelled; admitting the bracketed nesting while refusing the dotted one would just relocate the same silent-zero-rows bug. This is the scenario that would go green against a fix that only looked at dots.",
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: dimensions is a TAP spine field with no TCK analogue)",
+      "layer": "lite",
+      "query": "MATCH (n:grid_fixtures__node) WHERE n.dimensions[\"tap\"][\"playground\"] = \"gridkin\"",
+      "expected_error": {
+        "type": "SearchExecutionError"
+      }
     }
   ]
 }

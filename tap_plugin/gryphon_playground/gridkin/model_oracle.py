@@ -260,55 +260,57 @@ def _walk_json(container: Any, steps: tuple[Any, ...]) -> Any:
 
 
 def _walk_json_spine(container: Any, steps: tuple[Any, ...]) -> Any:
-    """Walk the steps AFTER a JSON-typed spine field (`dimensions`).
+    """Resolve the steps AFTER a JSON-typed spine field (`dimensions`).
 
     `Entity.dimensions` is a **flat** object by construction (`req-grid-dimension-em`:
     "a flat JSON object, not nested namespace objects", whose keys are "namespaced
     keys separated by `.`"). TAP's house dimension keys are therefore dotted —
-    `tap.cloud`, `tap.playground`, `git.host` — and a run of dot-steps after
-    `dimensions` names ONE key, not a namespace walk.
+    `tap.cloud`, `tap.playground`, `git.host` — while a dot in a Gryphon property
+    path means "one level deeper". Those two facts collide.
 
-    Segmentation rule (`req-grid-traversal-lang-envelope-paths-9`):
+    **Ruled 2026-09-23 by the owner (`Issue# 781 - tap`, option a):** a path of
+    MORE THAN ONE step after `dimensions` is REFUSED by the engine with an error
+    naming the bracketed form, and is never reinterpreted as a whole key
+    (`req-grid-dimension-query-form`, `req-grid-traversal-lang-envelope-paths-9`).
+    One step is legal in either spelling and names one key.
 
-    - a maximal run of consecutive **dot**-steps is ONE key, its name the step
-      names rejoined with `.`;
-    - a **bracket-key** step is always exactly one key, and terminates the run.
+    So this oracle models exactly one step, and refuses to model more. It does not
+    raise the engine's error, because the runner never consults the oracle on a
+    rejection scenario (`_check_oracle` returns early on `expected_error`) — a
+    multi-step path reaching here therefore came from the FUZZ GENERATOR, not from
+    a hand-authored scenario, and the honest answer is "not modelled" rather than a
+    value. `OracleUnmodeled` is the existing channel for that and skips the
+    comparison instead of asserting something false.
 
-    So `n.dimensions.tap.cloud` and `n.dimensions["tap.cloud"]` are the same
-    lookup, while `n.dimensions["a"]["b"]` and `n.dimensions["a"].b` stay
-    available for a genuine nested walk.
+    Two earlier versions of this function were both wrong in ways worth recording,
+    because each looked correct:
 
-    This model previously routed `dimensions` through the per-step `_walk_json`,
-    which is the defect the executor carried (B2): the dotted spelling asked for
-    a NESTED path no conformant `dimensions` value can hold, so under 3VL it
-    resolved to NULL and the query returned a clean, alarmless zero rows for
-    essentially every real TAP dimension key. An oracle that walks per-step
-    agrees with that bug and would report the executor's repair as a regression.
+    - It first routed `dimensions` through the per-step `_walk_json`, which is the
+      executor's B2 defect exactly. An oracle that walks per-step AGREES with the
+      bug and would report the executor's repair as a regression.
+    - It was then changed to join a run of dot-steps into one key — the rival
+      design, which the owner considered and DECLINED. Modelling that here would
+      make the lane green against an engine implementing the opposite rule.
+
+    The lesson (`Issue# 779 - tap`): the judge can carry the same defect as the
+    thing it judges, so a green differential lane is only as strong as the oracle
+    has been checked to be.
     """
-    segments: list[str] = []
-    run: list[str] = []
+    if len(steps) > 1:
+        raise OracleUnmodeled("multi-step path into a JSON spine field (refused by the engine)")
+
     for step in steps:
         if isinstance(step, DotStep):
-            run.append(step.name)
-            continue
-        if isinstance(step, KeyStep):
-            if run:
-                segments.append(".".join(run))
-                run = []
-            segments.append(step.key)
-            continue
-        raise OracleUnmodeled("array index/wildcard field path")
-    if run:
-        segments.append(".".join(run))
+            key = step.name
+        elif isinstance(step, KeyStep):
+            key = step.key
+        else:
+            raise OracleUnmodeled("array index/wildcard field path")
+        if not isinstance(container, dict):
+            return None
+        return container.get(key, None)
 
-    current = container
-    for key in segments:
-        if current is None:
-            return None
-        if not isinstance(current, dict):
-            return None
-        current = current.get(key, None)
-    return current
+    return container
 
 
 def _resolve_field(field_path: FieldPath, record: NodeRecord) -> Any:
