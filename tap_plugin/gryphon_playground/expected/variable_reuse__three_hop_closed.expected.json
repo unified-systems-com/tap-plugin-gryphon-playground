@@ -1,0 +1,90 @@
+{
+  "nodes": [
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fbf70e51757",
+      "entity_type": "grid_fixtures__node",
+      "name": "Cycle A",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    },
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc0ad869bfa",
+      "entity_type": "grid_fixtures__node",
+      "name": "Cycle B",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    },
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc171d1a72d",
+      "entity_type": "grid_fixtures__node",
+      "name": "Cycle C",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    },
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc238769248",
+      "entity_type": "grid_fixtures__node",
+      "name": "Self Loop",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    }
+  ],
+  "edges": [
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc3a152f103",
+      "entity_type": "edge",
+      "name": "019e4e07-9975-7501-8d81-0fbf70e51757 --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc0ad869bfa",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    },
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc4e4a98242",
+      "entity_type": "edge",
+      "name": "019e4e07-9975-7501-8d81-0fc0ad869bfa --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc171d1a72d",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    },
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc53fb5e766",
+      "entity_type": "edge",
+      "name": "019e4e07-9975-7501-8d81-0fc171d1a72d --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fbf70e51757",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    },
+    {
+      "entity_id": "019e4e07-9975-7501-8d81-0fc61559e1c7",
+      "entity_type": "edge",
+      "name": "019e4e07-9975-7501-8d81-0fc238769248 --[PG_LINKS__grid_fixtures]--> 019e4e07-9975-7501-8d81-0fc238769248",
+      "dimensions": {
+        "tap.playground": "gridkin"
+      },
+      "deleted_at": null,
+      "version": 1
+    }
+  ],
+  "rows": [],
+  "warnings": {
+    "multi_hop_no_anchor": "Multi-hop MATCH has no WHERE anchor; this may scan the full graph. Add a WHERE predicate or a LIMIT for better performance."
+  }
+}

@@ -17,7 +17,7 @@
         },
         {
           "intent": "same variable bound to both relationship endpoints (n)-[r]-(n)",
-          "note": "v0 edge scan ignores variable identity (no from==to) — needs engine work",
+          "note": "PARTIALLY CLOSED 2026-09-23 by req-grid-traversal-lang-shape-9 (tap#743): in-pattern variable reuse now unifies, and the DIRECTED forms are covered by the variable_reuse scenarios ((a)-[:T]->(a) self-loop, (a)-[:T]->(b)-[:T]->(a) closed walk). Still open: the TCK's exact shape (n)-[r]-(n), which is UNDIRECTED and binds an edge variable — the undirected repeat is untested and the model oracle fails closed on a repeated edge variable rather than modelling it.",
           "kind": "feature"
         },
         {

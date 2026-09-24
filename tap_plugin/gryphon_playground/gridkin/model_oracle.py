@@ -259,13 +259,68 @@ def _walk_json(container: Any, steps: tuple[Any, ...]) -> Any:
     return current
 
 
+def _walk_json_spine(container: Any, steps: tuple[Any, ...]) -> Any:
+    """Resolve the steps AFTER a JSON-typed spine field (`dimensions`).
+
+    `Entity.dimensions` is a **flat** object by construction (`req-grid-dimension-em`:
+    "a flat JSON object, not nested namespace objects", whose keys are "namespaced
+    keys separated by `.`"). TAP's house dimension keys are therefore dotted —
+    `tap.cloud`, `tap.playground`, `git.host` — while a dot in a Gryphon property
+    path means "one level deeper". Those two facts collide.
+
+    **Ruled 2026-09-23 by the owner (`Issue# 781 - tap`, option a):** a path of
+    MORE THAN ONE step after `dimensions` is REFUSED by the engine with an error
+    naming the bracketed form, and is never reinterpreted as a whole key
+    (`req-grid-dimension-query-form`, `req-grid-traversal-lang-envelope-paths-9`).
+    One step is legal in either spelling and names one key.
+
+    So this oracle models exactly one step, and refuses to model more. It does not
+    raise the engine's error, because the runner never consults the oracle on a
+    rejection scenario (`_check_oracle` returns early on `expected_error`) — a
+    multi-step path reaching here therefore came from the FUZZ GENERATOR, not from
+    a hand-authored scenario, and the honest answer is "not modelled" rather than a
+    value. `OracleUnmodeled` is the existing channel for that and skips the
+    comparison instead of asserting something false.
+
+    Two earlier versions of this function were both wrong in ways worth recording,
+    because each looked correct:
+
+    - It first routed `dimensions` through the per-step `_walk_json`, which is the
+      executor's B2 defect exactly. An oracle that walks per-step AGREES with the
+      bug and would report the executor's repair as a regression.
+    - It was then changed to join a run of dot-steps into one key — the rival
+      design, which the owner considered and DECLINED. Modelling that here would
+      make the lane green against an engine implementing the opposite rule.
+
+    The lesson (`Issue# 779 - tap`): the judge can carry the same defect as the
+    thing it judges, so a green differential lane is only as strong as the oracle
+    has been checked to be.
+    """
+    if len(steps) > 1:
+        raise OracleUnmodeled("multi-step path into a JSON spine field (refused by the engine)")
+
+    for step in steps:
+        if isinstance(step, DotStep):
+            key = step.name
+        elif isinstance(step, KeyStep):
+            key = step.key
+        else:
+            raise OracleUnmodeled("array index/wildcard field path")
+        if not isinstance(container, dict):
+            return None
+        return container.get(key, None)
+
+    return container
+
+
 def _resolve_field(field_path: FieldPath, record: NodeRecord) -> Any:
     """Resolve a node field path to its value (None == NULL/unobserved).
 
     Lane rules (spec `req-grid-traversal-lang-envelope-paths`):
       - `n.<spinefield>`      → Entity spine
       - `n.data.<...>`        → per-model data lane (may walk into JSON)
-      - `n.dimensions.<key>`  → JSON key inside the spine `dimensions`
+      - `n.dimensions.<key>`  → JSON key inside the spine `dimensions`, whose
+        dot-runs segment as ONE flat key (`_walk_json_spine`)
     """
     steps = field_path.steps
     if not steps:
@@ -289,7 +344,9 @@ def _resolve_field(field_path: FieldPath, record: NodeRecord) -> Any:
         elif head == "name":
             base = record.name
         elif head == "dimensions":
-            return _walk_json(record.dimensions, rest)
+            # JSON-typed spine field: dot-RUN segmentation, not a per-step walk
+            # (req-grid-traversal-lang-envelope-paths-9).
+            return _walk_json_spine(record.dimensions, rest)
         elif head == "deleted_at":
             base = None  # live records only reach here; deleted are pre-filtered
         else:
@@ -476,10 +533,36 @@ def _enumerate_pattern(pattern: PathPattern, graph: Graph, inputs: dict[str, Any
     Handles node-only patterns (type scan / bare labelless scan) and single- or
     multi-hop chains with directed / undirected edges. Bounded repetition
     (`*min..max`) is not modeled (v0 executor rejects it too).
+
+    **In-pattern variable reuse is a JOIN, not a rebind** (`req-grid-traversal-lang-shape-9`).
+    `MATCH (p)-[:X]->(o)<-[:Y]-(p)` says "the same `p` on both ends", so a repeat
+    occurrence CONSTRAINS the extension rather than overwriting the binding. This
+    model previously did `new_vars[var] = other` unconditionally — last-wins —
+    which is precisely the defect the executor carried (tap#743): the repeat
+    position was tied to nothing and the answer was a superset the size of that
+    position's fan-out. An oracle that models the bug certifies it, so the
+    equality is enforced here, by identity, exactly as the executor's
+    `_repeated_variable_equality_filters` emits it in SQL.
+
+    Two adjacent reuse shapes are NOT modeled and fail closed:
+
+    - a repeated EDGE variable — the executor unifies those on the Edge row's
+      `pk`, and this model does not bind edge variables at all, so it would
+      silently answer a superset;
+    - one name used for both a node and an edge position — the executor refuses
+      it (`SearchExecutionError`); the runner's rejection path, not this one,
+      is where that case belongs.
     """
     for edge_pat in pattern.edges:
         if edge_pat.min_hops != 1 or edge_pat.max_hops != 1:
             raise OracleUnmodeled("bounded multi-hop traversal")
+
+    node_names = [n.variable for n in pattern.nodes if n.variable]
+    edge_names = [e.variable for e in pattern.edges if e.variable]
+    if len(edge_names) != len(set(edge_names)):
+        raise OracleUnmodeled("edge variable repeated within one pattern")
+    if set(node_names) & set(edge_names):
+        raise OracleUnmodeled("one variable names both a node and an edge position")
 
     nodes = pattern.nodes
     edges = pattern.edges
@@ -518,6 +601,12 @@ def _enumerate_pattern(pattern: PathPattern, graph: Graph, inputs: dict[str, Any
                     continue
                 new_vars = dict(m.node_vars)
                 if next_node_pat.variable:
+                    bound = m.node_vars.get(next_node_pat.variable)
+                    if bound is not None and bound.entity_id != other_id:
+                        # Repeat occurrence of an already-bound name: the same
+                        # variable cannot denote two entities, so this extension
+                        # is not a match (req-grid-traversal-lang-shape-9).
+                        continue
                     new_vars[next_node_pat.variable] = other
                 extended.append(
                     PatternMatch(

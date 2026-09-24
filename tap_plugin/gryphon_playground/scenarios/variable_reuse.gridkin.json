@@ -1,0 +1,83 @@
+{
+  "feature": "In-pattern variable reuse — one name at two node positions of ONE pattern is a JOIN, not a rebind",
+  "background": {
+    "grift_fixture": "fixtures/cycles.grift.json"
+  },
+  "scenarios": [
+    {
+      "name": "a reused name on a single hop asks for a self-loop and returns only the self-looped node",
+      "tags": [
+        "variable-reuse",
+        "self-loop",
+        "cycles",
+        "shape-9"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-shape-9"
+      ],
+      "note": "The cycles fixture is the discriminating one: A->B->C->A plus S->S. `(a)-[:PG_LINKS]->(a)` asks for an edge whose two endpoints are the same entity, which ONLY S satisfies. Before req-grid-traversal-lang-shape-9 the repeat position contributed no binding and therefore no constraint, so the same query returned every node and every edge in the fixture (tap#743) — the answer this scenario's expected envelope is shaped to reject. Do not 'simplify' the fixture to one without a self-loop: the case would then be empty-over-empty and prove nothing.",
+      "inspired_by": "opencypher TCK — clauses/match (self-loop relationship)",
+      "layer": "lite",
+      "query": "MATCH (a:grid_fixtures__node)-[:PG_LINKS__grid_fixtures]->(a)",
+      "expected_envelope": "expected/variable_reuse__self_loop.expected.json",
+      "expected_sql_snapshot": "expected/variable_reuse__self_loop.sql.txt"
+    },
+    {
+      "name": "a two-hop walk closing on its origin returns only the node that can close in two hops",
+      "tags": [
+        "variable-reuse",
+        "multi-hop",
+        "cycles",
+        "shape-9"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-shape-9",
+        "req-grid-gryphon-multihop"
+      ],
+      "note": "The three-node cycle needs THREE hops to return to A, so a two-hop closed walk excludes A, B and C and admits only the self-looped S (S->S->S). Unfixed, the closing `(a)` was tied to nothing and the query returned all four nodes and all four edges — a superset the size of the second position's fan-out. The gap between 'all four' and 'one' is the whole assertion.",
+      "inspired_by": "opencypher TCK — clauses/match (cyclic path returns to origin)",
+      "layer": "lite",
+      "query": "MATCH (a:grid_fixtures__node)-[:PG_LINKS__grid_fixtures]->(b:grid_fixtures__node)-[:PG_LINKS__grid_fixtures]->(a)",
+      "expected_envelope": "expected/variable_reuse__two_hop_closed.expected.json",
+      "expected_sql_snapshot": "expected/variable_reuse__two_hop_closed.sql.txt"
+    },
+    {
+      "name": "a three-hop walk closing on its origin admits the three-node cycle and the self-loop",
+      "tags": [
+        "variable-reuse",
+        "multi-hop",
+        "cycles",
+        "shape-9"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-shape-9",
+        "req-grid-gryphon-multihop"
+      ],
+      "note": "The positive companion to the two-hop case: at three hops the A->B->C->A cycle DOES close, so the unification must ADMIT it rather than merely exclude things — a scenario that only ever shrinks a result set cannot tell a correct join from a filter that rejects everything. S->S->S->S closes too, which is why the self-loop is in the expected envelope alongside the cycle. HONEST LIMIT, measured: on THIS fixture the unfixed engine returns the same four nodes (every length-3 walk starts somewhere in the cycle), so this case discriminates on the SQL SNAPSHOT — the missing `T7.to_entity_id = tap_edge.from_entity_id` closure — and not on the envelope. The envelope discrimination lives in the self-loop and two-hop cases, which go from one node to all four when the unification is removed. Keep all three.",
+      "inspired_by": "opencypher TCK — clauses/match (cyclic path returns to origin)",
+      "layer": "lite",
+      "query": "MATCH (a:grid_fixtures__node)-[:PG_LINKS__grid_fixtures]->(b:grid_fixtures__node)-[:PG_LINKS__grid_fixtures]->(c:grid_fixtures__node)-[:PG_LINKS__grid_fixtures]->(a)",
+      "expected_envelope": "expected/variable_reuse__three_hop_closed.expected.json",
+      "expected_sql_snapshot": "expected/variable_reuse__three_hop_closed.sql.txt"
+    },
+    {
+      "name": "one name used for both a node and an edge position is refused with the remedy named",
+      "tags": [
+        "variable-reuse",
+        "rejection",
+        "shape-9"
+      ],
+      "covers": [
+        "req-grid-traversal-lang-shape-9"
+      ],
+      "note": "The reuse shape that is NOT a join: a node binds an Entity and an edge binds an Edge row, so no value can be both. Under the old first-occurrence-wins binding this silently aliased — accepted, and answering a different question. The refusal is part of the contract, which is why it is pinned here and not left to the effect suite alone.",
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: the TCK has no node/relationship name-collision rejection case)",
+      "layer": "lite",
+      "query": "MATCH (a:grid_fixtures__node)-[a:PG_LINKS__grid_fixtures]->(b:grid_fixtures__node)",
+      "expected_error": {
+        "type": "SearchExecutionError",
+        "message_contains": "names both a node and an edge"
+      }
+    }
+  ]
+}
