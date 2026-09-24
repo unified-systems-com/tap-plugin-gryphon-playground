@@ -340,6 +340,35 @@ class TestStageCoverage:
         assert stage_coverage.query_carries_where(inner_only)
 
 
+class TestSnapshotLiveness:
+    """Every captured query plan filters out soft-deleted rows.
+
+    TAP soft-deletes by stamping `tap_entity.deleted_at`; a query path that
+    forgets the filter answers with retired rows, no error and a plausible count.
+    That was `Issue# 802 - tap`: the labelless spine scan's committed snapshots
+    carried no `deleted_at` predicate for months — the defect was visible in the
+    text of the expected files and nothing read them for it. A committed SQL
+    snapshot with captured SQL must mention `"deleted_at" IS NULL` at least once.
+    """
+
+    _LIVENESS = '"deleted_at" IS NULL'
+    _NO_SQL = "-- (no SQL captured)"
+
+    def test_every_sql_snapshot_carries_a_liveness_filter(self):
+        missing = []
+        for path in sorted((PLUGIN_ROOT / "expected").glob("*.sql.txt")):
+            text = path.read_text(encoding="utf-8")
+            if text.strip() == self._NO_SQL:
+                continue  # an empty IN list / LIMIT 0 short-circuits before any SQL
+            if self._LIVENESS not in text:
+                missing.append(path.name)
+        assert not missing, (
+            f"SQL snapshots with no {self._LIVENESS} predicate: {missing}. A query plan "
+            "that never filters soft-deleted rows returns retired entities; fix the "
+            "executor path, never the snapshot."
+        )
+
+
 class TestCoverageMatrix:
     def test_maps_rid_to_covering_scenarios(self):
         scenarios = [

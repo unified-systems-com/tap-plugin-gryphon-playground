@@ -14,6 +14,36 @@
       "query": "MATCH (n:grid_fixtures__node)",
       "expected_envelope": "expected/soft_deletes__type_scan.expected.json",
       "expected_sql_snapshot": "expected/soft_deletes__type_scan.sql.txt"
+    },
+    {
+      "name": "labelless scan filtered by an entity-type list excludes a soft-deleted node",
+      "tags": ["bare-match", "spine-scan", "soft-delete"],
+      "covers": ["req-grid-traversal-lang-bare-match"],
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: soft-delete visibility filter on an all-node scan filtered by a type list)",
+      "layer": "lite",
+      "query": "MATCH (n) WHERE n.entity_type IN [\"grid_fixtures__node\"]",
+      "expected_envelope": "expected/soft_deletes__bare_scan.expected.json",
+      "expected_sql_snapshot": "expected/soft_deletes__bare_scan.sql.txt"
+    },
+    {
+      "name": "labelless scan filtered by entity type excludes a soft-deleted node",
+      "tags": ["bare-match", "spine-scan", "soft-delete"],
+      "covers": ["req-grid-traversal-lang-bare-match"],
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: soft-delete visibility filter on an all-node scan filtered by type)",
+      "layer": "lite",
+      "query": "MATCH (n) WHERE n.entity_type = \"grid_fixtures__node\"",
+      "expected_envelope": "expected/soft_deletes__bare_scan_typed.expected.json",
+      "expected_sql_snapshot": "expected/soft_deletes__bare_scan_typed.sql.txt"
+    },
+    {
+      "name": "labelless data-lane scan matching only a soft-deleted node returns nothing",
+      "tags": ["bare-match", "data-lane", "soft-delete"],
+      "covers": ["req-grid-traversal-lang-bare-match"],
+      "inspired_by": "opencypher TCK — no applicable feature folder (TAP-native: soft-delete visibility filter on a label-free data-lane scan)",
+      "layer": "lite",
+      "query": "MATCH (n) WHERE n.data.kind = \"deleted\"",
+      "expected_envelope": "expected/soft_deletes__bare_scan_data_lane.expected.json",
+      "expected_sql_snapshot": "expected/soft_deletes__bare_scan_data_lane.sql.txt"
     }
   ]
 }
