@@ -1,5 +1,5 @@
 manifest_version = "0"
-plugin_version = "0.5.0"
+plugin_version = "0.6.0"
 slug = "gryphon_playground"
 name = "Gryphon Playground"
 description = "The Gridkin scenario corpus + harness for testing the Gryphon query language, built on the grid_fixtures node vocabulary."
