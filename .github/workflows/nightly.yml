@@ -11,19 +11,22 @@
 #            4-5 minutes), every query classified against the model oracle with the
 #            TLP metamorphic relation riding the same suite. A campaign over a broken
 #            plugin measures nothing, which is why it runs after the tests, not beside.
-#   latest   the latest core release (informational).
+#            There is deliberately no "latest core release" row: the floor is proven on
+#            every push, and a release is too late to be early warning — a hardcoded
+#            release ref also goes stale and reds the whole run.
 #   campaign the verdict: ONE distinct defect fingerprint reds this run, with every
 #            defect's seed, query and detail — and how to reproduce one graph, classify
 #            (check the oracle first), fix, and lock in — in the job's step summary.
 #            No summary at all is NOT OBSERVED and also red: a nightly that produced no
 #            verdict is not a pass.
 #
-# HOW WORD GETS OUT: the red run. Nothing here files an issue or opens a pull request.
-# github_core collects every workflow run in the org (`github_actions_run`: event,
-# conclusion, age) and the double-tap landing page is where the operator looks, so a
-# red nightly — and a nightly that never fired — is visible there without any inbox of
-# its own (operator ruling 2026-09-14, unified-systems-com/tap#439; an issue-filing
-# reporter was built and withdrawn).
+# HOW WORD GETS OUT: a red `main` row files or updates ONE open issue for the owner
+# ("Nightly red vs core main"); the next green closes it — the same owner-issue job the
+# other plugin nightlies carry. It is keyed on the `main` row, whose result already
+# covers the after-tests campaign run; the campaign VERDICT stays its own red job.
+# github_core also collects every workflow run in the org (`github_actions_run`: event,
+# conclusion, age), so a red nightly — and a nightly that never fired — is visible on
+# the double-tap landing page as well.
 #
 # THE LEDGER LANDS ON A BRANCH, never on main by a bot: each clean night appends one
 # row to `nightly/fuzz-ledger` (de-duplicated by exact line) and the step summary
@@ -61,7 +64,17 @@ permissions:
 jobs:
   main:
     name: vs core main + fuzz campaign
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@284d7e7925e2fe050a82ed60c3c196653ce2af2d
+    # The harness is core `main`, whose web image runs as `USER nonroot`; the after-tests
+    # command writes into the `.:/app` bind mount, which only the runner's uid owns. This
+    # plugin-ci revision aligns the container uid with the runner (TAP_USER=<uid>:0,
+    # req-tap-serving-unprivileged); the earlier pin did not, so `mkdir /app/after-tests-out`
+    # was refused. Pinned to unified-systems-com/tap main at 32148e00 (2026-09-25).
+    # plugin-ci's submit-dependency-snapshot job holds contents: write (tap#664) and a caller
+    # that does not grant it fails at startup; that job runs on push only, so on this
+    # schedule/dispatch workflow it is skipped and boot-and-test keeps its own read-only grant.
+    permissions:
+      contents: write
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@32148e00e6fc2f19bded21e883f5151b4bbd1342
     with:
       plugin_slug: gryphon_playground
       harness_ref: ${{ inputs.harness_ref || 'main' }}
@@ -84,19 +97,12 @@ jobs:
     secrets:
       harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
 
-  latest:
-    name: vs latest core release (v0.1.6, informational)
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@284d7e7925e2fe050a82ed60c3c196653ce2af2d
-    with:
-      plugin_slug: gryphon_playground
-      harness_ref: v0.1.6
-    secrets:
-      harness_pat: ${{ secrets.TAP_CORE_RO_PAT }}
-
   # The ledger row lands on one persistent branch — only after a green main row, since a
-  # row from a run whose suite failed is a row about nothing. The only write scope in
-  # this workflow, on this job only. No pull request is opened (org policy keeps that
-  # switch off, and a human opening it from the compare link is the intended shape).
+  # row from a run whose suite failed is a row about nothing. The only job here that
+  # uses a contents: write token (the `main` row's grant exists for plugin-ci's push-only
+  # snapshot job, which never runs on this workflow). No pull request is opened (org
+  # policy keeps that switch off, and a human opening it from the compare link is the
+  # intended shape).
   ledger:
     name: append the ledger row on the ledger branch
     needs: [main]
@@ -198,3 +204,39 @@ jobs:
           MAIN_RESULT: ${{ needs.main.result }}
           LEDGER_URL: ${{ needs.ledger.outputs.compare_url }}
         run: python3 .github/scripts/campaign_verdict.py campaign/after-tests-out/campaign-summary.json "$MAIN_RESULT" "$LEDGER_URL"
+
+  # A red `main` row files or updates ONE open issue for the owner; the next green closes it.
+  owner-issue:
+    name: file or close the owner issue
+    needs: [main]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MAIN_RESULT: ${{ needs.main.result }}
+      TITLE: "Nightly red vs core main"
+      ASSIGNEE: notgeorge   # the sole owner in .github/CODEOWNERS
+    steps:
+      - name: Red main files or updates one issue; green main closes it
+        run: |
+          set -euo pipefail
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")"
+          if [ "$MAIN_RESULT" = "success" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --repo "$GITHUB_REPOSITORY" --comment "Green again vs core main: $run_url."
+            fi
+            echo "vs core main: green"
+            exit 0
+          fi
+          body="$(printf '%s\n\n%s' "The nightly run of this plugin against core \`main\` is **$MAIN_RESULT**: $run_url" "The push/PR lane proves the declared floor; this row proves the next core. Owner: fix the plugin (keep the floor), or raise the floor if the fix needs a newer core. This issue closes itself on the next green nightly.")"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Still red: $run_url."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$body" --assignee "$ASSIGNEE"
+          fi
+          echo "::error::vs core main is $MAIN_RESULT — see $run_url"
+          exit 1
