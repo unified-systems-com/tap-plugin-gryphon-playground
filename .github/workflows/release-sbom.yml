@@ -24,6 +24,9 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-    uses: unified-systems-com/tap/.github/workflows/plugin-release-sbom.yml@main
+    # Pinned by commit SHA for the same reason as ci.yml, and more so: this workflow decides
+    # what is put in the SBOM and what gets attested, so an unpinned call signs whatever the
+    # default branch says today. SHA = tap main as of 2026-09-25.
+    uses: unified-systems-com/tap/.github/workflows/plugin-release-sbom.yml@32148e00e6fc2f19bded21e883f5151b4bbd1342
     with:
       plugin_slug: gryphon_playground

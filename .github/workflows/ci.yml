@@ -32,7 +32,20 @@ permissions:
 
 jobs:
   tap:
-    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@main
+    # `contents: write` on THIS job, not at the top of the file: plugin-ci.yml's
+    # submit-dependency-snapshot job declares `contents: write` (it POSTs to the
+    # dependency-graph snapshots API), and a called workflow cannot hold more than its
+    # caller granted — so without this the whole run ends in `startup_failure` before any
+    # job exists, which is what this repo has been doing on every run (tap#772, tap#796).
+    # plugin-ci.yml says to add it here in as many words. Eight sibling plugin repos
+    # already carry exactly this grant; the top-level default stays `contents: read`.
+    permissions:
+      contents: write
+    # Pinned by commit SHA, not by a name: `@main` lets whoever moves tap's default branch
+    # decide which validation logic runs here, so a green run would not attest to the logic
+    # this repo reviewed (tap#376's done-test; validate_plugin --repo enforces it). This SHA
+    # is tap main as of 2026-09-25, which is the logic this lane was already running.
+    uses: unified-systems-com/tap/.github/workflows/plugin-ci.yml@32148e00e6fc2f19bded21e883f5151b4bbd1342
     with:
       plugin_slug: gryphon_playground
       # Pinned deliberately. `main` means "whatever core is today", which turns an
