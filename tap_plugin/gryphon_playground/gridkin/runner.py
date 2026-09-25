@@ -60,41 +60,78 @@ def normalize_sql(text: str) -> str:
 # type>)`` (executor `_execute_bare_type_scan`). That enumeration is an
 # *environment fact* — it grows whenever ANY plugin registers a new node type —
 # not a property of the query plan under test. Snapshotting it verbatim makes the
-# two labelless-scan oracles churn on every new entity type for no behavioral
-# reason, so it is redacted to a stable sentinel before comparison: the SQL
-# analogue of the envelope's declared member projection (`_ASSERTED_MEMBER_KEYS`).
-# The residual filter (`= %s` / `LIKE %s`), the IN-on-`entity_type` shape itself,
-# and every other clause are still asserted exactly — and the envelope assertion
-# still verifies the rows the scan actually returns. Only this exact column with an
-# `IN` appears in any oracle (the bare-type-scan), so the redaction is surgical.
-# See spec-gridkin-v0.md req-gridkin-explain-snapshot.
+# labelless-scan oracles churn on every new entity type for no behavioral reason,
+# so it is redacted to a stable sentinel before comparison: the SQL analogue of the
+# envelope's declared member projection (`_ASSERTED_MEMBER_KEYS`).
+#
+# The run is identified by WHAT IT BINDS, not by its shape: an ``entity_type IN
+# (%s, …)`` run is the registry's only when its bound params are exactly the set of
+# registered node types. A query's own type-list filter (``WHERE n.entity_type IN
+# [...]``) compiles to the same SQL shape and is asserted exactly. Identifying the
+# run by shape — the first ``entity_type IN`` in the text — collapsed the query's own
+# filter on a second application (`Issue# 22 - tap-plugin-gryphon-playground`).
+# Identity makes the redaction idempotent: a collapsed run binds the sentinel, which
+# is never a registered type. See spec-gridkin-v0.md req-gridkin-explain-snapshot.
 _REGISTRY_SENTINEL = "<entity-type-registry>"
 _ENTITY_TYPE_IN_RE = re.compile(r'"tap_entity"\."entity_type" IN \((%s(?:,\s*%s)*)\)')
 _PARAMS_LINE_RE = re.compile(r"-- params: (\[.*\])")
+# Every token in a statement that consumes one bound param, in order: a placeholder,
+# or a registry run already collapsed to the sentinel (which binds the sentinel).
+_PARAM_SLOT_RE = re.compile(r"%s|" + re.escape(f"IN ({_REGISTRY_SENTINEL})"))
 
 
-def redact_registry_scan(text: str) -> str:
+def _registered_node_types() -> frozenset[str]:
+    """The node types a labelless scan enumerates — the executor's own roster (edges excluded)."""
+    from tap_grid.registry import list_entity_types
+
+    return frozenset(et for et in list_entity_types() if et != "edge")
+
+
+def _redact_statement(sql_lines: list[str], params_line: str, registry: frozenset[str]) -> list[str]:
+    params_match = _PARAMS_LINE_RE.fullmatch(params_line)
+    if params_match is None:
+        return [*sql_lines, params_line]
+    params = list(ast.literal_eval(params_match.group(1)))
+    sql = "\n".join(sql_lines)
+    runs = []
+    for match in _ENTITY_TYPE_IN_RE.finditer(sql):
+        first = len(_PARAM_SLOT_RE.findall(sql[: match.start()]))
+        width = match.group(1).count("%s")
+        bound = params[first : first + width]
+        if len(bound) == width and len(set(bound)) == width and set(bound) == registry:
+            runs.append((match, first, width))
+    if not runs:
+        return [*sql_lines, params_line]
+    for match, first, width in reversed(runs):  # right to left keeps earlier offsets valid
+        sql = sql[: match.start()] + f'"tap_entity"."entity_type" IN ({_REGISTRY_SENTINEL})' + sql[match.end() :]
+        params[first : first + width] = [_REGISTRY_SENTINEL]
+    return [*sql.split("\n"), "-- params: " + repr(params)]
+
+
+def redact_registry_scan(text: str, registry: frozenset[str] | None = None) -> str:
     """Collapse the labelless bare-type-scan's registered-node-type enumeration.
 
-    Replaces the ``entity_type IN (%s, %s, …)`` placeholder run with a single
-    ``<entity-type-registry>`` sentinel and drops the matching leading params
-    (the registered node types bind first in the WHERE), substituting the same
-    sentinel. A no-op for every other statement. Applied to both sides of the SQL
-    comparison and to the written snapshot, so the committed oracle is stable
-    across registry growth (req-gridkin-explain-snapshot).
+    Per statement, each ``entity_type IN (%s, %s, …)`` run whose bound params are
+    exactly the registered node types becomes ``IN (<entity-type-registry>)``, and
+    its params collapse to that one sentinel in place. Every other ``IN`` — including
+    a query's own type-list filter — and every other param is left exactly as it is.
+    Idempotent. Applied to both sides of the SQL comparison and to the written
+    snapshot (req-gridkin-explain-snapshot). ``registry`` defaults to the live
+    registry; tests pass one explicitly.
     """
-    match = _ENTITY_TYPE_IN_RE.search(text)
-    if match is None:
+    if _ENTITY_TYPE_IN_RE.search(text) is None:
         return text
-    registry_param_count = match.group(1).count("%s")
-    text = _ENTITY_TYPE_IN_RE.sub(f'"tap_entity"."entity_type" IN ({_REGISTRY_SENTINEL})', text, count=1)
-
-    def _trim_params(params_match: re.Match[str]) -> str:
-        params = ast.literal_eval(params_match.group(1))
-        residual = params[registry_param_count:]
-        return "-- params: " + repr([_REGISTRY_SENTINEL, *residual])
-
-    return _PARAMS_LINE_RE.sub(_trim_params, text, count=1)
+    roster = _registered_node_types() if registry is None else frozenset(registry)
+    out: list[str] = []
+    pending: list[str] = []
+    for line in text.split("\n"):
+        if _PARAMS_LINE_RE.fullmatch(line):
+            out.extend(_redact_statement(pending, line, roster))
+            pending = []
+        else:
+            pending.append(line)
+    out.extend(pending)  # a trailing statement with no params line binds nothing to redact
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -639,7 +676,33 @@ def _check_sql(scenario: Scenario, actual_sql: str) -> list[str]:
     actual = _normalize_for_compare(actual_sql)
     if expected == actual:
         return []
-    return ["SQL MISMATCH — the executor's compiled SQL changed (query plan).\n" + _line_diff(expected, actual)]
+    return [_sql_mismatch_headline(expected, actual) + "\n" + _line_diff(expected, actual)]
+
+
+def _sql_mismatch_headline(expected: str, actual: str) -> str:
+    """Name what actually differs: the statement text, the bound params, or both.
+
+    A real plan change nearly always moves the params too; a mismatch confined to the
+    SQL text with identical params is a signal to suspect the comparison pipeline
+    (redaction, collapsing) before the executor (`Issue# 22 - tap-plugin-gryphon-playground`).
+    """
+
+    def split(text: str) -> tuple[list[str], list[str]]:
+        lines = text.splitlines()
+        return [ln for ln in lines if not ln.startswith("-- params:")], [
+            ln for ln in lines if ln.startswith("-- params:")
+        ]
+
+    exp_sql, exp_params = split(expected)
+    act_sql, act_params = split(actual)
+    if exp_sql != act_sql and exp_params == act_params:
+        return (
+            "SQL MISMATCH — the statement text differs but every bound param is identical. "
+            "Suspect the comparison pipeline (redaction / collapsing) before the executor."
+        )
+    if exp_sql == act_sql:
+        return "SQL MISMATCH — the statement text is identical; only the bound params differ."
+    return "SQL MISMATCH — the executor's compiled SQL changed (query plan and params)."
 
 
 def _check_scan_roster(scenario: Scenario, actual_sql: str) -> list[str]:

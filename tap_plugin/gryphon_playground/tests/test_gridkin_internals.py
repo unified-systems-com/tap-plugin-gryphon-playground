@@ -17,11 +17,14 @@ from tap_plugin.gryphon_playground.gridkin.loader import PLUGIN_ROOT, GridkinSce
 from tap_plugin.gryphon_playground.gridkin.runner import (
     _ASSERTED_MEMBER_KEYS,
     _ENTITY_COLUMNS_SENTINEL,
+    _REGISTRY_SENTINEL,
     _canonical_envelope,
     _project_member,
+    _sql_mismatch_headline,
     collapse_entity_columns,
     entity_column_run,
     normalize_sql,
+    redact_registry_scan,
 )
 
 from tap.jsonfiles import load_json_file, load_schema
@@ -338,6 +341,61 @@ class TestStageCoverage:
         assert not stage_coverage.query_carries_where(no_where)
         assert stage_coverage.query_carries_where(outer_where)
         assert stage_coverage.query_carries_where(inner_only)
+
+
+class TestRegistryRedaction:
+    """`redact_registry_scan` collapses the registry by identity, never by shape.
+
+    `Issue# 22 - tap-plugin-gryphon-playground`: a second application collapsed a
+    query's own `entity_type IN` filter, because the run was chosen as "the first
+    `entity_type IN`" rather than "the run that binds the registry".
+    """
+
+    _REGISTRY = frozenset({"grid_fixtures__node", "grid_fixtures__hub", "grid_fixtures__leaf"})
+    _TWO_IN = (
+        "-- statement 1 · stage: bare-type-scan\n"
+        'SELECT <entity-spine-columns> FROM "tap_entity"\n'
+        'WHERE ("tap_entity"."deleted_at" IS NULL AND "tap_entity"."entity_type" IN (%s, %s, %s) '
+        'AND "tap_entity"."entity_type" IN (%s))\n'
+        "-- params: ['grid_fixtures__hub', 'grid_fixtures__leaf', 'grid_fixtures__node', 'grid_fixtures__node']"
+    )
+
+    def _redact(self, text):
+        return redact_registry_scan(text, registry=self._REGISTRY)
+
+    def test_idempotent_on_a_two_in_statement(self):
+        once = self._redact(self._TWO_IN)
+        assert self._redact(once) == once
+        assert once.count(_REGISTRY_SENTINEL) == 2  # the SQL run + its one collapsed param
+
+    def test_the_querys_own_in_list_is_never_collapsed(self):
+        once = self._redact(self._TWO_IN)
+        assert f'"entity_type" IN ({_REGISTRY_SENTINEL}) AND "tap_entity"."entity_type" IN (%s))' in once
+        assert once.endswith(f"-- params: ['{_REGISTRY_SENTINEL}', 'grid_fixtures__node']")
+
+    def test_a_query_in_list_that_is_not_the_registry_is_left_alone(self):
+        text = (
+            'WHERE "tap_entity"."entity_type" IN (%s, %s)\n'
+            "-- params: ['grid_fixtures__hub', 'grid_fixtures__node']"
+        )
+        assert self._redact(text) == text
+
+    def test_the_run_is_found_by_its_params_not_its_position(self):
+        # The query's own filter comes FIRST here; shape-based redaction ate it.
+        text = (
+            'WHERE ("tap_entity"."entity_type" IN (%s) AND "tap_entity"."entity_type" IN (%s, %s, %s))\n'
+            "-- params: ['grid_fixtures__node', 'grid_fixtures__hub', 'grid_fixtures__leaf', 'grid_fixtures__node']"
+        )
+        once = self._redact(text)
+        assert f'IN (%s) AND "tap_entity"."entity_type" IN ({_REGISTRY_SENTINEL}))' in once
+        assert once.endswith(f"-- params: ['grid_fixtures__node', '{_REGISTRY_SENTINEL}']")
+        assert self._redact(once) == once
+
+    def test_mismatch_headline_names_a_params_identical_difference(self):
+        a = "WHERE x IN (%s)\n-- params: ['a']"
+        b = "WHERE x IN (<entity-type-registry>)\n-- params: ['a']"
+        assert "every bound param is identical" in _sql_mismatch_headline(a, b)
+        assert "query plan and params" in _sql_mismatch_headline(a, "WHERE y\n-- params: ['b']")
 
 
 class TestSnapshotLiveness:
